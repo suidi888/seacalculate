@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海運運費試算工具</title>
+    <!-- 網頁標籤圖標 (Favicon) -->
+    <link rel="icon" href="./純頭像（去背）.png" type="image/png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- html2pdf.js for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- OpenCC 簡繁轉換庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+    
+    <style>
+        :root {
+            /* 水滴集運 品牌色 */
+            --primary-blue: #303f6f; 
+            --primary-blue-light: #e6eaf3;
+            --accent-orange: #ea580c; 
+            --accent-yellow: #f59e0b;
+            --bg-gray: #f8fafc;
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-gray);
+            color: #1e293b;
+        }
+        
+        .shadow-premium {
+            box-shadow: 0 10px 25px -5px rgba(48, 63, 111, 0.1), 0 8px 10px -6px rgba(48, 63, 111, 0.1);
+        }
+        .input-focus:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(48, 63, 111, 0.15);
+        }
+        /* 自定義捲軸 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .hover-bg-light:hover { background-color: var(--primary-blue-light); }
+        
+        /* 列印用樣式 (修復 PDF 裁切與空白的核心) */
+        .print-table th, .print-table td {
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .print-table th { background-color: #f1f5f9; font-weight: bold; color: #303f6f; }
+        
+        /* PDF 匯出時強制觸發的樣式 */
+        .pdf-export-active {
+            width: 1000px !important;
+            max-width: 1000px !important;
+            margin: 0 auto !important;
+            padding: 20px !important;
+            background: white !important;
+        }
+        .pdf-export-active .overflow-x-auto {
+            overflow: visible !important; /* 解除水平滾動，避免裁切 */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 錯誤提示訊息 (Toast) -->
+    <div id="toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-[100] translate-y-[-20px] flex items-center">
+        <i class="fa-solid fa-circle-exclamation mr-3 text-xl"></i>
+        <span id="toastMsg" class="font-bold">錯誤訊息</span>
+    </div>
+
+    <!-- 導覽列 -->
+    <nav class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="https://suidi-logistics.com/" target="_blank" class="flex items-center">
+                    <!-- 左上角Logo -->
+                    <img src="./水滴集運中英橫logo.png" alt="水滴集運" class="h-10 object-contain" onerror="this.style.display='none'; document.getElementById('logoText').style.display='block';">
+                    <span id="logoText" style="display:none;" class="font-black text-2xl tracking-tight text-[#303f6f]">水滴集運</span>
+                </a>
+            </div>
+            
+            <!-- 電腦版選單 -->
+            <div class="hidden lg:flex items-center space-x-8 text-[15px] font-bold text-[#303f6f]">
+                <a href="https://suidi-logistics.com/" target="_blank" class="hover:text-[#ea580c] transition">首頁</a>
+                <a href="https://suidi-logistics.com/%E9%97%9C%E6%96%BC%E6%88%91%E5%80%91/" target="_blank" class="hover:text-[#ea580c] transition">關於我們</a>
+                <a href="https://suidi-logistics.com/%E6%9C%8D%E5%8B%99%E4%BB%8B%E7%B4%B9/" target="_blank" class="hover:text-[#ea580c] transition">服務項目</a>
+                <a href="https://suidi-logistics.com/%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%af/" target="_blank" class="hover:text-[#ea580c] transition">最新消息</a>
+                <a href="https://suidi-logistics.com/%E5%B8%B8%E8%A6%8B%E5%95%8F%E9%A1%8C/" target="_blank" class="hover:text-[#ea580c] transition">常見問題</a>
+                <a href="https://lin.ee/oRc8Cuo" target="_blank" class="bg-[#303f6f] text-white px-6 py-2.5 rounded-full shadow-md hover:bg-[#ea580c] hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center">
+                    <i class="fa-brands fa-line text-lg mr-1.5"></i> 聯絡我們
+                </a>
+            </div>
+            
+            <!-- 手機版選單按鈕 -->
+            <div class="lg:hidden">
+                <a href="https://lin.ee/oRc8Cuo" target="_blank" class="text-[#303f6f] text-2xl">
+                    <i class="fa-brands fa-line"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主內容區 -->
+    <main class="flex-grow max-w-6xl mx-auto w-full py-10 px-4">
+        
+        <!-- 標題區塊 -->
+        <div class="text-center mb-10">
+            <h2 class="text-3xl md:text-4xl font-black text-[#303f6f] mb-4">海運運費試算工具</h2>
+            <p class="text-gray-500 max-w-xl mx-auto text-sm leading-relaxed mb-2">
+                只需輸入品名關鍵字與包裹規格，系統將自動比對資料庫線上試算運費。
+            </p>
+            <p class="text-[#ea580c] font-bold text-lg inline-block border-b-2 border-[#ea580c] pb-1">
+                台灣人在地經營的集運 大型貨物交給水滴最放心！
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- 左側：輸入表單 -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-premium border border-gray-50 overflow-hidden relative pb-6">
+                    <div class="h-1.5 w-full bg-[#303f6f]"></div>
+                    
+                    <form id="shippingForm" class="p-6 md:p-8">
+                        
+                        <!-- 動態商品列表容器 -->
+                        <div id="itemsContainer" class="space-y-6">
+                            <!-- 第一個商品 -->
+                            <div class="item-block bg-gray-50/50 p-5 rounded-2xl border border-gray-200 relative shadow-sm">
+                                <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                    <h4 class="font-bold text-[#303f6f] item-number-title">商品 <span class="idx-text">1</span></h4>
+                                    <button type="button" class="text-red-400 hover:text-red-600 font-bold text-sm remove-item-btn transition hidden">
+                                        <i class="fa-solid fa-trash mr-1"></i> 移除
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <!-- 品名搜尋 (支援簡繁轉換) -->
+                                    <div class="relative md:col-span-2">
+                                        <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體)
+                                        </label>
+                                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發、桌子...)" autocomplete="off">
+                                        <i class="fa-solid fa-search absolute left-4 top-8 text-gray-400"></i>
+                                        <!-- 搜尋結果將動態顯示照片與品項 -->
+                                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
+                                    </div>
+                                    <!-- 實重單價 -->
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
+                                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                                    </div>
+                                    <!-- 材積單價 -->
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
+                                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                                    </div>
+                                </div>
+                
+                                <div>
+                                    <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                                        <i class="fa-solid fa-box-open text-[#303f6f] mr-1.5"></i> 2. 規格與數量
+                                    </label>
+                                    <div class="grid grid-cols-5 gap-2">
+                                        <div>
+                                            <input type="number" class="item-l w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="長" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-w w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="寬" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-h w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="高" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-wt w-full p-2.5 bg-white border border-[#303f6f] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#303f6f] px-1" placeholder="單件重" step="0.1" min="0.1">
+                                            <p class="text-[10px] text-[#303f6f] font-bold text-center mt-1">KG</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-qty w-full p-2.5 bg-white border border-[#ea580c] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#ea580c] px-1" placeholder="數量" value="1" min="1">
+                                            <p class="text-[10px] text-[#ea580c] font-bold text-center mt-1">件</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 新增商品按鈕 -->
+                        <div class="mt-4">
+                            <button type="button" id="addItemBtn" class="w-full py-3 border-2 border-dashed border-[#303f6f] text-[#303f6f] font-bold rounded-xl hover:bg-blue-50 transition flex items-center justify-center">
+                                <i class="fa-solid fa-plus mr-2"></i> 新增下一件商品 <span id="itemCountLabel" class="ml-1">(1/10)</span>
+                            </button>
+                        </div>
+
+                        <hr class="border-gray-100 my-8">
+
+                        <!-- 全局：收件地址區塊 -->
+                        <div class="space-y-4">
+                            <label class="flex items-center text-sm font-bold text-slate-700 uppercase tracking-wider">
+                                <i class="fa-solid fa-map-location-dot text-[#303f6f] mr-2"></i> 收件地址設定
+                            </label>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="relative">
+                                    <select id="citySelect" class="w-full pl-4 pr-10 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none input-focus appearance-none text-gray-700 font-medium">
+                                        <option value="" disabled selected>請選擇縣市</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-4 top-4.5 text-gray-400 text-xs pointer-events-none"></i>
+                                </div>
+                                <div class="relative">
+                                    <select id="districtSelect" disabled class="w-full pl-4 pr-10 py-3.5 bg-gray-100 border border-gray-200 rounded-xl focus:outline-none input-focus appearance-none text-gray-500 font-medium cursor-not-allowed">
+                                        <option value="" disabled selected>請選擇地區</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down absolute right-4 top-4.5 text-gray-400 text-xs pointer-events-none"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- 偏遠提示文案 -->
+                            <div id="remoteNotice" class="hidden flex items-start p-3.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-bold mt-3 transition-all">
+                                <i class="fa-solid fa-circle-exclamation mt-0.5 mr-2 text-amber-600"></i> 
+                                <div>
+                                    此地址可能有偏遠費用產生，請聯繫客服取得報價。<br>
+                                    <a href="https://lin.ee/oRc8Cuo" target="_blank" class="text-amber-600 underline font-black hover:text-amber-500 text-xs mt-1 inline-block">點此聯繫 Line 客服</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交計算按鈕 -->
+                        <button type="submit" class="w-full bg-[#ea580c] hover:bg-[#c2410c] text-white font-black py-4.5 rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 active:scale-95 flex items-center justify-center space-x-2 text-lg mt-8 border-b-4 border-[#9a3412] active:border-b-0 active:mt-[36px]">
+                            <i class="fa-solid fa-calculator"></i>
+                            <span>開始試算海運運費</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 右側：結果摘要與客服 -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-24 space-y-6">
+                    
+                    <!-- 摘要卡片 -->
+                    <div id="resultCard" class="bg-white rounded-2xl shadow-premium border border-gray-100 overflow-hidden">
+                        <div class="bg-[#303f6f] px-6 py-4 text-white flex justify-between items-center border-b-4 border-[#ea580c]">
+                            <h3 class="font-bold flex items-center text-lg"><i class="fa-solid fa-file-invoice-dollar mr-2 text-[#fcd34d]"></i> 試算摘要</h3>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div id="emptyResult" class="py-8 text-center text-gray-300">
+                                <i class="fa-solid fa-box-open text-6xl mb-4 opacity-20"></i>
+                                <p class="text-sm font-medium">請輸入左方資訊<br>立即試算專屬海運報價</p>
+                            </div>
+
+                            <div id="hasResult" class="hidden space-y-5">
+                                <div class="bg-[#f8fafc] border border-gray-100 rounded-xl p-4">
+                                    <div class="flex justify-between items-center text-sm text-gray-600 font-bold border-b border-gray-200 pb-2 mb-2">
+                                        <span>總實重</span>
+                                        <span class="text-base text-[#303f6f]" id="resTotalWt">0 KG</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm text-gray-600 font-bold">
+                                        <span>總材積</span>
+                                        <span class="text-base text-[#303f6f]" id="resTotalVol">0 才</span>
+                                    </div>
+                                </div>
+
+                                <div class="pt-2 text-center">
+                                    <p class="text-[11px] text-gray-400 uppercase tracking-widest mb-1 font-bold">預估總金額 (含低消限制)</p>
+                                    <div class="text-5xl font-black text-[#ea580c] tracking-tighter" id="resTotalAmount">
+                                        NT$ 0
+                                    </div>
+                                </div>
+
+                                <button type="button" onclick="scrollToReport()" class="w-full mt-4 bg-[#303f6f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-800 transition shadow-md">
+                                    <i class="fa-solid fa-arrow-down mr-1"></i> 查看完整報價單
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 客服區 -->
+                    <div class="bg-gradient-to-br from-[#303f6f] to-[#1e293b] rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                        <i class="fa-brands fa-line absolute -right-4 -bottom-4 text-7xl opacity-10"></i>
+                        <h4 class="font-bold mb-3 flex items-center text-base">
+                            <i class="fa-solid fa-headset text-[#fcd34d] mr-2"></i> 品名找不到？
+                        </h4>
+                        <p class="text-xs text-gray-300 mb-5 leading-relaxed">有些特殊品項可能未列在系統中，或您需要大批量出貨、確認偏遠費用。請直接將資訊傳給我們為您報價。</p>
+                        <a href="https://lin.ee/oRc8Cuo" target="_blank" class="block w-full text-center py-3 bg-white text-[#303f6f] rounded-xl text-sm font-black hover:bg-[#ea580c] hover:text-white transition shadow-md">
+                            LINE 一對一專人客服
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 報價總表與注意事項 (計算後顯示) -->
+        <div id="fullReportSection" class="mt-10 hidden">
+            <!-- PDF 下載按鈕 -->
+            <div class="flex justify-between items-end mb-4 px-2">
+                <h3 class="text-2xl font-black text-[#303f6f]">海運試算報價總表</h3>
+                <button type="button" onclick="downloadPDF()" id="pdfBtn" class="bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-2.5 px-5 rounded-lg shadow transition flex items-center text-sm">
+                    <i class="fa-solid fa-file-pdf mr-2"></i> 一鍵下載 PDF
+                </button>
+            </div>
+            
+            <!-- 欲匯出 PDF 的報價單區域 -->
+            <!-- 這裡去除了 overflow-x-auto 並確保背景為白，避免 PDF 空白與裁切 -->
+            <div id="quoteReportElement" class="bg-white p-8 rounded-2xl shadow-premium border border-gray-100">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-black text-[#303f6f] mb-2 tracking-widest">水滴集運 海運報價單</h2>
+                    <p class="text-sm text-gray-500 font-medium">Professional Logistics Service</p>
+                </div>
+                
+                <div class="flex justify-between text-sm text-gray-700 font-bold mb-4 border-b-2 border-[#303f6f] pb-3">
+                    <p>試算日期：<span id="reportDate" class="font-normal text-gray-600"></span></p>
+                    <p>收件地區：<span id="reportAddress" class="font-normal text-gray-600">尚未選擇</span></p>
+                </div>
+
+                <!-- 報價表格 -->
+                <div class="w-full">
+                    <table class="w-full print-table text-sm border-collapse" style="table-layout: auto;">
+                        <thead class="bg-[#e6eaf3] text-[#303f6f]">
+                            <tr>
+                                <th style="width: 5%;">項次</th>
+                                <th style="width: 25%;">品名</th>
+                                <th>尺寸 (L*W*H)</th>
+                                <th>數量</th>
+                                <th>總實重<br>(KG)</th>
+                                <th>總材積<br>(才)</th>
+                                <th>計費單價<br>(實/材)</th>
+                                <th>小計(NTD)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody" class="text-gray-700">
+                            <!-- JS 動態生成商品明細 -->
+                        </tbody>
+                        <tfoot class="bg-gray-50 font-bold text-[#303f6f]">
+                            <tr>
+                                <td colspan="4" class="text-right py-3 pr-4 border">合計</td>
+                                <td class="border bg-yellow-50" id="reportSumWeight">0</td>
+                                <td class="border bg-yellow-50" id="reportSumVolume">0</td>
+                                <td class="border"></td>
+                                <td class="border bg-yellow-50" id="reportSumFreight">0</td>
+                            </tr>
+                            <tr id="reportMinChargeRow" class="hidden text-red-500">
+                                <td colspan="7" class="text-right py-2 pr-4 border">未達海運低消 NT$ 1800 補差額</td>
+                                <td class="border" id="reportMinDiff">0</td>
+                            </tr>
+                            <tr class="bg-[#303f6f] text-white text-lg">
+                                <td colspan="7" class="text-right py-4 pr-4 border-none rounded-bl-lg">預估總計 (NTD)</td>
+                                <td class="border-none rounded-br-lg text-[#ea580c] font-black" id="reportFinalTotal">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- 客製化注意事項 -->
+                <div class="mt-8 bg-gray-50 rounded-xl p-5 border border-gray-200">
+                    <h4 class="font-bold text-[#303f6f] mb-3 flex items-center">
+                        <i class="fa-solid fa-circle-info text-[#ea580c] mr-2"></i> 注意事項
+                    </h4>
+                    <ul class="space-y-2.5 text-sm text-gray-600 leading-relaxed font-medium">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-[#303f6f] mt-1 mr-2 opacity-50 text-xs"></i>
+                            本試算結果僅供參考，海運貨物會因商品材質、是否帶電等因素影響海運單價，實際以入庫測量數據、客服判斷之單價為計費標準。
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-[#303f6f] mt-1 mr-2 opacity-50 text-xs"></i>
+                            <span class="text-red-500 font-bold">海運單筆集運低消NT$1800，未滿以NT$1800計費。</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-[#303f6f] mt-1 mr-2 opacity-50 text-xs"></i>
+                            海運報價皆已包稅、包清關、包基本派送到您地址一樓門口貨車可卸貨處。<br>
+                            若您的貨物有超出運送限制、收貨地址偏遠、加購其他附加服務（例如上樓.組裝.拆清運木架），將可能產生額外費用，請洽客服進一步諮詢。
+                        </li>
+                        <li class="flex items-center mt-3 pt-3 border-t border-gray-200">
+                            <a href="https://suidi-logistics.com/%E6%9C%8D%E5%8B%99%E4%BB%8B%E7%B4%B9/#04-1" target="_blank" class="inline-flex items-center text-white bg-[#303f6f] hover:bg-[#1e293b] px-4 py-1.5 rounded-lg text-xs transition shadow">
+                                海運詳細說明 <i class="fa-solid fa-arrow-up-right-from-square ml-1.5"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-8 mt-auto">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <p class="text-xs text-gray-500 font-medium">&copy; 2026 水滴集運 Suidi Logistics. 專業海運報價系統.</p>
+        </div>
+    </footer>
+
+    <!-- 邏輯腳本 -->
+    <script>
+        // --- 1. 初始化 OpenCC 簡繁轉換 ---
+        let converter = null;
+        try {
+            // 使用 OpenCC 將輸入的簡體轉換為繁體
+            converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
+        } catch(e) {
+            console.error("OpenCC 載入失敗，將採用預設字串比對", e);
+            // 降級處理：直接回傳原始字串
+            converter = (str) => str;
+        }
+
+        // --- 2. 資料庫建置：結合客戶最新的 CSV 資料 ---
+        // (1類: 18/110, 2類: 21/126, 3類: 23/138)
+        const csvData = [
+            { cat: 1, priceWt: 18, priceVol: 110, items: "櫃體（純木製）、櫃子（純木製）、電視櫃（純木製）、餐邊櫃（純木製）、鞋櫃（純木製）、玄關櫃（純木製）、書櫃（純木製）、斗櫃（純木製）、五斗櫃（純木製）、六斗櫃（純木製）、抽屜櫃（純木製 不帶輪子）、餐桌（純木製）、桌子（純木製）、餐椅（純木製）、椅子（純木製）、書桌（純木製）、電腦桌（純木製）、辦公桌（純木製）、吧台桌（純木製）、邊桌（純木製 不帶輪子）、茶几（純木製 不帶輪子）、收納櫃（純木製）、儲物櫃（純木製）、穿鞋椅（純木製）、穿鞋凳（純木製）、衣櫃（純木製）、上下舖床架（純木製）、床架（純木製）、沙發（非真皮且不帶電動）、懶人沙發（非真皮且不帶電動）、方塊椅、洞洞板（純木製）、梳妝台（純木製 不帶電和鏡子）、吧台椅子（純木製）、塑膠盒（非接觸食物用）、塑膠袋（非接觸食物用）、紙類用品、紙箱、垃圾桶（塑膠材質）、儲物櫃（塑膠材質）、衣櫃（塑膠材質）、藤編鞋櫃、合板收納儲物櫃、辦公電腦椅、紙類用品、塑膠管、塑膠片、PE膜、固定夾、PVC板、膠膜、塑膠瓶、塑膠蓋、塑膠殼、塑膠吊牌、木椅、木桌、木收納櫃、小茶几、塑膠衣架、穿凳椅、懶人椅、塑膠椅墊、磁吸式漱口杯、浴室置物架、吧台椅子、木製電視櫃、塑膠卷膜、嬰兒床墊、嬰兒床架、木製衣櫃、塑膠材質垃圾桶、上下床、壓克力茶几、塑膠魚缸、儲物床、木質屏風立柱、原木升降茶几" },
+            { cat: 2, priceWt: 21, priceVol: 126, items: "洞洞板（金屬製）、梳妝台（木+金屬製 不帶電和鏡子）、吧台椅子（木+金屬製）、垃圾桶（金屬材質）、儲物櫃（金屬材質）、衣櫃（金屬材質）、層架（金屬材質）、開放式衣帽間（金屬材質）、電競桌（木+金屬製）、電腦椅（有手動升降功能）、電競椅（有手動升降功能）、掛衣架（金屬製）、不鏽鋼置物架、桌子（木製+壓克力）、櫃子（木製+壓克力）、茶几（木製+壓克力）、花店展示架（塑膠+金屬）、不鏽鋼櫥櫃（不含爐台）、寵物圍欄（塑膠製）、洗車房地格柵（塑膠製）、塑膠墊、置物推車（金屬製）、活動背板(KT材質)、KT板、開瓶器、手動工具、吊籃藤椅、不織布提袋（無版權商標）、門板（木+金屬製）、PU非真皮沙發凳子、金屬置物架、PVC包、布包、尼龍包、皮夾、塑膠雨衣、橡膠片、自行車配件、普通家具、射出模、註塑模具、塑膠粒、簡易機器配件、針車機配件、PU皮料、音箱外殼、塑膠接頭、燈罩、玻璃球、無卡通圖案筆、皮帶扣、水龍頭配件、塑膠紐扣" },
+            { cat: 3, priceWt: 23, priceVol: 138, items: "沙發（真皮 且不帶電動）、懶人沙發（真皮 且不帶電動）、電視櫃（帶玻璃）、鋼化玻璃茶几、烤漆玻璃茶几、地墊（塑膠製）、高爾夫球頭、汽車吸塵器、排線器、雨鞋內襯、水龍頭、人體模特、雨傘、簡易健身器材、室內用溫度計、非插電簡易樂器、簡單塑膠類汽車配件、手電筒（裝電池的 但出貨不帶電池)、擺設品、擠牙膏神器、玻璃茶几、烤漆茶几、機器簡易配件、布砂輪片、砂紙、壓縮機配件、繼電器、刀具、閥門類、散熱片、散熱風扇、眼罩、磁鐵、單體喇叭、充電器半成品、刀塔座、壓力表、油壓計、減速機、加熱棒、分割器、分度盤、鋸片、主軸、指揮棒、連接線、成人腳踏自行車、玻璃瓶、石頭工藝品、吸盤掛勾、下水槽置物架、筷子架、寵物籠、寵物用品、塑膠車腳墊、化妝桌、衣物收納袋、貓爬架、陶瓷花瓶、紙板貓抓板、洗手盆陶瓷、花灑、鋁梯、手提袋、電視壁掛架、帆布袋、掛畫、化妝包、升降茶几、梯子、折疊梯、寵物用品不帶電、貓抓柱、抽屜推車、手動升降桌、手動升降電腦椅、手動升降電競椅、背包、皮革桌墊、寵物圍欄、硅藻墊" }
+        ];
+
+        let searchableItems = [];
+        csvData.forEach(c => {
+            c.items.split('、').forEach(itemName => {
+                let trimmed = itemName.trim();
+                if(trimmed) {
+                    searchableItems.push({ 
+                        name: trimmed, 
+                        priceWt: c.priceWt, 
+                        priceVol: c.priceVol 
+                    });
+                }
+            });
+        });
+
+        // 台灣縣市資料 (省略部分以維持精簡，同之前設定)
+        const twCounties = {
+            "基隆市": ["仁愛區", "信義區", "中正區", "中山區", "安樂區", "暖暖區", "七堵區"],
+            "台北市": ["中正區", "大同區", "中山區", "松山區", "大安區", "萬華區", "信義區", "士林區", "北投區", "內湖區", "南港區", "文山區"],
+            "新北市": ["萬里區", "金山區", "板橋區", "汐止區", "深坑區", "石碇區", "瑞芳區", "平溪區", "雙溪區", "貢寮區", "新店區", "坪林區", "烏來區", "永和區", "中和區", "土城區", "三峽區", "樹林區", "鶯歌區", "三重區", "新莊區", "泰山區", "林口區", "蘆洲區", "五股區", "八里區", "淡水區", "三芝區", "石門區"],
+            "桃園市": ["中壢區", "平鎮區", "龍潭區", "楊梅區", "新屋區", "觀音區", "桃園區", "龜山區", "八德區", "大溪區", "復興區", "大園區", "蘆竹區"],
+            "新竹市": ["東區", "北區", "香山區"],
+            "新竹縣": ["竹北市", "湖口鄉", "新豐鄉", "新埔鎮", "關西鎮", "芎林鄉", "寶山鄉", "竹東鎮", "五峰鄉", "橫山鄉", "尖石鄉", "北埔鄉", "峨眉鄉"],
+            "苗栗縣": ["竹南鎮", "頭份市", "三灣鄉", "南庄鄉", "獅潭鄉", "後龍鎮", "通霄鎮", "苑裡鎮", "苗栗市", "造橋鄉", "頭屋鄉", "公館鄉", "大湖鄉", "泰安鄉", "銅鑼鄉", "三義鄉", "西湖鄉", "卓蘭鎮"],
+            "台中市": ["中區", "東區", "南區", "西區", "北區", "北屯區", "西屯區", "南屯區", "太平區", "大里區", "霧峰區", "烏日區", "豐原區", "后里區", "石岡區", "東勢區", "和平區", "新社區", "潭子區", "大雅區", "神岡區", "大肚區", "沙鹿區", "龍井區", "梧棲區", "清水區", "大甲區", "外埔區", "大安區"],
+            "彰化縣": ["彰化市", "芬園鄉", "花壇鄉", "秀水鄉", "鹿港鎮", "福興鄉", "線西鄉", "和美鎮", "伸港鄉", "員林市", "社頭鄉", "二水鄉", "田中鎮", "田尾鄉", "埤頭鄉", "溪州鄉", "竹塘鄉", "二林鎮", "大城鄉", "芳苑鄉", "埔鹽鄉", "埔心鄉", "溪湖鎮"],
+            "南投縣": ["南投市", "中寮鄉", "草屯鎮", "國姓鄉", "埔里鎮", "仁愛鄉", "名間鄉", "集集鎮", "水里鄉", "魚池鄉", "信義鄉", "竹山鎮", "鹿谷鄉"],
+            "雲林縣": ["斗南鎮", "大埤鄉", "虎尾鎮", "土庫鎮", "褒忠鄉", "東勢鄉", "台西鄉", "崙背鄉", "麥寮鄉", "斗六市", "林內鄉", "古坑鄉", "莿桐鄉", "西螺鎮", "二崙鄉", "北港鎮", "水林鄉", "口湖鄉", "四湖鄉", "元長鄉"],
+            "嘉義市": ["東區", "西區"],
+            "嘉義縣": ["番路鄉", "梅山鄉", "竹崎鄉", "阿里山鄉", "中埔鄉", "大埔鄉", "水上鄉", "鹿草鄉", "太保市", "朴子市", "東石鄉", "六腳鄉", "新港鄉", "民雄鄉", "大林鎮", "溪口鄉", "義竹鄉", "布袋鎮"],
+            "台南市": ["中西區", "東區", "南區", "北區", "安平區", "安南區", "永康區", "歸仁區", "新化區", "左鎮區", "玉井區", "楠西區", "南化區", "仁德區", "關廟區", "龍崎區", "官田區", "麻豆區", "佳里區", "西港區", "七股區", "將軍區", "學甲區", "北門區", "新營區", "後壁區", "白河區", "東山區", "六甲區", "下營區", "柳營區", "鹽水區", "善化區", "大內區", "山上區", "新市區", "安定區"],
+            "高雄市": ["新興區", "前金區", "苓雅區", "鹽埕區", "鼓山區", "旗津區", "前鎮區", "三民區", "楠梓區", "小港區", "左營區", "仁武區", "大社區", "東沙群島", "南沙群島", "岡山區", "路竹區", "阿蓮區", "田寮區", "燕巢區", "橋頭區", "梓官區", "彌陀區", "永安區", "湖內區", "鳳山區", "大寮區", "林園區", "鳥松區", "大樹區", "旗山區", "美濃區", "六龜區", "內門區", "杉林區", "甲仙區", "桃源區", "那瑪夏區", "茂林區"],
+            "屏東縣": ["屏東市", "三地門鄉", "霧台鄉", "瑪家鄉", "九如鄉", "里港鄉", "高樹鄉", "鹽埔鄉", "長治鄉", "麟洛鄉", "竹田鄉", "內埔鄉", "萬丹鄉", "潮州鎮", "泰武鄉", "來義鄉", "萬巒鄉", "崁頂鄉", "新埤鄉", "南州鄉", "林邊鄉", "東港鎮", "琉球鄉", "佳冬鄉", "新園鄉", "枋寮鄉", "枋山鄉", "春日鄉", "獅子鄉", "車城鄉", "牡丹鄉", "恆春鎮", "滿州鄉"],
+            "宜蘭縣": ["宜蘭市", "頭城鎮", "礁溪鄉", "壯圍鄉", "員山鄉", "羅東鎮", "三星鄉", "大同鄉", "五結鄉", "冬山鄉", "蘇澳鎮", "南澳鄉"],
+            "花蓮縣": ["花蓮市", "新城鄉", "秀林鄉", "吉安鄉", "壽豐鄉", "鳳林鎮", "光復鄉", "豐濱鄉", "瑞穗鄉", "萬榮鄉", "玉里鎮", "卓溪鄉", "富里鄉"],
+            "台東縣": ["台東市", "綠島鄉", "蘭嶼鄉", "延平鄉", "卑南鄉", "鹿野鄉", "關山鎮", "海端鄉", "池上鄉", "東河鄉", "成功鎮", "長濱鄉", "太麻里鄉", "金峰鄉", "大武鄉", "達仁鄉"],
+            "澎湖縣": ["馬公市", "西嶼鄉", "望安鄉", "七美鄉", "白沙鄉", "湖西鄉"],
+            "金門縣": ["金沙鎮", "金湖鎮", "金寧鄉", "金城鎮", "烈嶼鄉", "烏坵鄉"],
+            "連江縣": ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
+        };
+        const remoteWords = ["花蓮", "台東", "屏東", "宜蘭", "南投", "澎湖", "金門", "馬祖", "綠島", "蘭嶼", "阿里山", "和平區", "信義鄉", "仁愛鄉", "琉球", "大同鄉", "南澳", "連江"];
+
+        // --- 3. 動態商品區塊控制 ---
+        const MAX_ITEMS = 10;
+        let itemIndexCounter = 1;
+        
+        const itemsContainer = document.getElementById('itemsContainer');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const citySelect = document.getElementById('citySelect');
+        const districtSelect = document.getElementById('districtSelect');
+        const remoteNotice = document.getElementById('remoteNotice');
+
+        // 初始化縣市
+        for (let city in twCounties) {
+            let option = document.createElement("option");
+            option.value = city; option.text = city;
+            citySelect.appendChild(option);
+        }
+
+        // 產生模擬商品圖片的函數 (使用開源 Placehold)
+        function getImageUrl(name) {
+            let encodedName = encodeURIComponent(name.substring(0, 2));
+            return `https://placehold.co/100x100/e6eaf3/303f6f?text=${encodedName}`;
+        }
+
+        // 新增商品表單區塊
+        function createItemBlock() {
+            itemIndexCounter++;
+            const block = document.createElement('div');
+            block.className = 'item-block bg-gray-50/50 p-5 rounded-2xl border border-gray-200 relative shadow-sm mt-6';
+            block.innerHTML = `
+                <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                    <h4 class="font-bold text-[#303f6f] item-number-title">商品 <span class="idx-text"></span></h4>
+                    <button type="button" class="text-red-400 hover:text-red-600 font-bold text-sm remove-item-btn transition">
+                        <i class="fa-solid fa-trash mr-1"></i> 移除
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="relative md:col-span-2">
+                        <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體)
+                        </label>
+                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發、桌子...)" autocomplete="off">
+                        <i class="fa-solid fa-search absolute left-4 top-8 text-gray-400"></i>
+                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
+                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
+                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                    </div>
+                </div>
+                <div>
+                    <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                        <i class="fa-solid fa-box-open text-[#303f6f] mr-1.5"></i> 2. 規格與數量
+                    </label>
+                    <div class="grid grid-cols-5 gap-2">
+                        <div>
+                            <input type="number" class="item-l w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="長" min="1">
+                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                        </div>
+                        <div>
+                            <input type="number" class="item-w w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="寬" min="1">
+                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                        </div>
+                        <div>
+                            <input type="number" class="item-h w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="高" min="1">
+                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                        </div>
+                        <div>
+                            <input type="number" class="item-wt w-full p-2.5 bg-white border border-[#303f6f] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#303f6f] px-1" placeholder="單件重" step="0.1" min="0.1">
+                            <p class="text-[10px] text-[#303f6f] font-bold text-center mt-1">KG</p>
+                        </div>
+                        <div>
+                            <input type="number" class="item-qty w-full p-2.5 bg-white border border-[#ea580c] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#ea580c] px-1" placeholder="數量" value="1" min="1">
+                            <p class="text-[10px] text-[#ea580c] font-bold text-center mt-1">件</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            itemsContainer.appendChild(block);
+            updateItemCount();
+        }
+
+        function updateItemCount() {
+            const blocks = itemsContainer.querySelectorAll('.item-block');
+            const count = blocks.length;
+            blocks.forEach((b, idx) => { b.querySelector('.idx-text').textContent = (idx + 1); });
+            document.getElementById('itemCountLabel').textContent = `(${count}/${MAX_ITEMS})`;
+            if (count >= MAX_ITEMS) addItemBtn.style.display = 'none';
+            else addItemBtn.style.display = 'flex';
+        }
+
+        addItemBtn.addEventListener('click', createItemBlock);
+
+        // --- 4. 委派事件處理 (包含搜尋與圖片顯示) ---
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('item-search')) {
+                const rawVal = e.target.value.trim();
+                const block = e.target.closest('.item-block');
+                const dropdown = block.querySelector('.search-dropdown');
+                
+                dropdown.innerHTML = '';
+                if (!rawVal) { dropdown.classList.add('hidden'); return; }
+
+                // 簡體轉繁體以利搜尋
+                const searchVal = converter(rawVal).toLowerCase();
+
+                const results = searchableItems.filter(i => i.name.toLowerCase().includes(searchVal)).slice(0, 8);
+                if (results.length > 0) {
+                    results.forEach(res => {
+                        const div = document.createElement('div');
+                        div.className = "px-4 py-3 text-sm cursor-pointer hover-bg-light flex items-center border-b border-gray-100 last:border-0";
+                        
+                        // 加入縮圖與資訊
+                        div.innerHTML = `
+                            <img src="${getImageUrl(res.name)}" class="w-10 h-10 rounded-md object-cover mr-3 border border-gray-200" alt="商品照片">
+                            <div class="flex-grow">
+                                <div class="font-bold text-slate-700">${res.name}</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">實重: $${res.priceWt} | 材積: $${res.priceVol}</div>
+                            </div>
+                            <span class="text-[10px] text-[#ea580c] font-bold bg-orange-50 px-2 py-1 rounded">選擇</span>
+                        `;
+                        div.onclick = function() {
+                            block.querySelector('.item-search').value = res.name;
+                            block.querySelector('.item-wt-price').value = res.priceWt;
+                            block.querySelector('.item-vol-price').value = res.priceVol;
+                            dropdown.classList.add('hidden');
+                        };
+                        dropdown.appendChild(div);
+                    });
+                } else {
+                    dropdown.innerHTML = `<div class="p-5 text-center text-xs text-gray-400">找不到包含「${rawVal}」的商品，<br><a href="https://lin.ee/oRc8Cuo" target="_blank" class="text-[#ea580c] font-bold underline mt-1 inline-block">請洽客服取得專屬報價</a></div>`;
+                }
+                dropdown.classList.remove('hidden');
+            }
+        });
+
+        // 點擊外部關閉搜尋或刪除商品
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-item-btn')) {
+                e.target.closest('.item-block').remove();
+                updateItemCount();
+            } else {
+                document.querySelectorAll('.search-dropdown').forEach(dropdown => {
+                    const block = dropdown.closest('.item-block');
+                    if (block && !block.querySelector('.item-search').contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        // --- 5. 地址連動邏輯 ---
+        citySelect.addEventListener('change', function() {
+            const city = citySelect.value;
+            districtSelect.innerHTML = '<option value="" disabled selected>請選擇地區</option>'; 
+            
+            if(city) {
+                districtSelect.disabled = false;
+                districtSelect.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                districtSelect.classList.add('bg-gray-50');
+                
+                twCounties[city].forEach(d => {
+                    let option = document.createElement("option");
+                    option.value = d; option.text = d;
+                    districtSelect.appendChild(option);
+                });
+            } else { districtSelect.disabled = true; }
+            checkRemoteArea();
+        });
+
+        districtSelect.addEventListener('change', checkRemoteArea);
+
+        function checkRemoteArea() {
+            const fullAddress = (citySelect.value || "") + (districtSelect.value || "");
+            if(!fullAddress) { remoteNotice.classList.add('hidden'); return; }
+            if (remoteWords.some(w => fullAddress.includes(w))) remoteNotice.classList.remove('hidden');
+            else remoteNotice.classList.add('hidden');
+        }
+
+        // --- 6. 工具與計算邏輯 ---
+        function showError(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function scrollToReport() {
+            document.getElementById('fullReportSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.getElementById('shippingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const blocks = document.querySelectorAll('.item-block');
+            let hasError = false;
+            
+            let totalFreight = 0;
+            let sumTotalWeight = 0;
+            let sumTotalVolume = 0;
+            let tableHtml = '';
+
+            blocks.forEach((block, index) => {
+                const name = block.querySelector('.item-search').value.trim() || `自填商品 ${index+1}`;
+                const priceWt = parseFloat(block.querySelector('.item-wt-price').value);
+                const priceVol = parseFloat(block.querySelector('.item-vol-price').value);
+                
+                const L = parseFloat(block.querySelector('.item-l').value);
+                const W = parseFloat(block.querySelector('.item-w').value);
+                const H = parseFloat(block.querySelector('.item-h').value);
+                const wt = parseFloat(block.querySelector('.item-wt').value);
+                const qty = parseInt(block.querySelector('.item-qty').value) || 1;
+
+                if (isNaN(priceWt) || isNaN(priceVol) || isNaN(L) || isNaN(W) || isNaN(H) || isNaN(wt)) {
+                    hasError = true;
+                    return;
+                }
+
+                // 計算：單項總實重 與 總材積
+                let itemTotalWt = wt * qty;
+                // 海運標準材積公式：(長x寬x高)/28328，取小數點後兩位
+                let itemTotalVol = Math.round(((L * W * H) / 28328) * qty * 100) / 100;
+                
+                // 比較：實重算出來的運費 vs 材積算出來的運費，取大者 (台灣海運計費標準)
+                let freightWt = itemTotalWt * priceWt;
+                let freightVol = itemTotalVol * priceVol;
+                let subtotal = Math.ceil(Math.max(freightWt, freightVol)); 
+
+                sumTotalWeight += itemTotalWt;
+                sumTotalVolume += itemTotalVol;
+                totalFreight += subtotal;
+
+                let appliedPriceText = (freightWt >= freightVol) ? `${priceWt}(實)` : `${priceVol}(材)`;
+
+                tableHtml += `
+                    <tr>
+                        <td class="border p-2 text-center">${index + 1}</td>
+                        <td class="border p-2 text-left font-bold text-[#303f6f]">${name}</td>
+                        <td class="border p-2 text-center text-xs text-gray-500">${L}x${W}x${H}</td>
+                        <td class="border p-2 text-center font-bold">${qty}</td>
+                        <td class="border p-2 text-center text-[#303f6f]">${itemTotalWt.toFixed(1)}</td>
+                        <td class="border p-2 text-center text-[#303f6f]">${itemTotalVol.toFixed(2)}</td>
+                        <td class="border p-2 text-center text-xs">${appliedPriceText}</td>
+                        <td class="border p-2 text-center font-bold text-[#ea580c]">${subtotal.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+
+            if (hasError) {
+                showError("請確保所有商品的「品名」、「尺寸」、「重量」與「單價」皆已完整填寫！");
+                return;
+            }
+
+            // 低消 1800 邏輯計算
+            let minDiff = 0;
+            let finalAmount = totalFreight;
+            if (totalFreight > 0 && totalFreight < 1800) {
+                minDiff = 1800 - totalFreight;
+                finalAmount = 1800;
+            }
+
+            // 渲染摘要 UI
+            document.getElementById('emptyResult').classList.add('hidden');
+            document.getElementById('hasResult').classList.remove('hidden');
+            document.getElementById('resTotalWt').textContent = `${sumTotalWeight.toFixed(1)} KG`;
+            document.getElementById('resTotalVol').textContent = `${sumTotalVolume.toFixed(2)} 才`;
+            document.getElementById('resTotalAmount').textContent = `NT$ ${finalAmount.toLocaleString()}`;
+
+            // 渲染報價單 UI
+            document.getElementById('fullReportSection').classList.remove('hidden');
+            
+            const d = new Date();
+            document.getElementById('reportDate').textContent = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            
+            const addrFull = (citySelect.value || "") + (districtSelect.value || "");
+            document.getElementById('reportAddress').textContent = addrFull || "尚未完整填寫";
+
+            document.getElementById('reportTableBody').innerHTML = tableHtml;
+            document.getElementById('reportSumWeight').textContent = sumTotalWeight.toFixed(1);
+            document.getElementById('reportSumVolume').textContent = sumTotalVolume.toFixed(2);
+            document.getElementById('reportSumFreight').textContent = totalFreight.toLocaleString();
+            
+            if (minDiff > 0) {
+                document.getElementById('reportMinChargeRow').classList.remove('hidden');
+                document.getElementById('reportMinDiff').textContent = minDiff.toLocaleString();
+            } else {
+                document.getElementById('reportMinChargeRow').classList.add('hidden');
+            }
+            document.getElementById('reportFinalTotal').textContent = finalAmount.toLocaleString();
+
+            scrollToReport();
+        });
+
+        // --- 7. 優化版 PDF 匯出功能 (確保 A4 不裁切、不空白) ---
+        function downloadPDF() {
+            const element = document.getElementById('quoteReportElement');
+            const d = new Date();
+            const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+            const filename = `水滴海運試算_${dateStr}.pdf`;
+            const pdfBtn = document.getElementById('pdfBtn');
+
+            // 強制加上 .pdf-export-active 鎖定 A4 寬度與排版
+            element.classList.add('pdf-export-active');
+
+            const opt = {
+                margin:       [10, 10, 15, 10], 
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 1 },
+                // windowWidth: 1000 必須對應 css 中的 1000px，確保截圖一致
+                html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1000 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            const originalText = pdfBtn.innerHTML;
+            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 產生中...';
+            pdfBtn.disabled = true;
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.remove('pdf-export-active'); // 復原排版
+                pdfBtn.innerHTML = originalText;
+                pdfBtn.disabled = false;
+            }).catch(err => {
+                console.error("PDF Export Error: ", err);
+                element.classList.remove('pdf-export-active');
+                pdfBtn.innerHTML = originalText;
+                pdfBtn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
