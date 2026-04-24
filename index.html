@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>海運運費試算工具</title>
-    <!-- 網頁標籤圖標 (Favicon) - 請確保圖片與此 HTML 檔案在同一資料夾 -->
+    <!-- 網頁標籤圖標 (Favicon) -->
     <link rel="icon" href="./純頭像（去背）.png" type="image/png">
     
     <!-- Tailwind CSS -->
@@ -13,17 +13,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
     <!-- html2pdf.js for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- OpenCC 簡繁轉換庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
     
     <style>
         :root {
             /* 水滴集運 品牌色 */
             --primary-blue: #303f6f; 
             --primary-blue-light: #e6eaf3;
-            /* 優化後的琥珀橘色，更具質感 */
             --accent-orange: #ea580c; 
-            --accent-orange-hover: #c2410c;
             --accent-yellow: #f59e0b;
             --bg-gray: #f8fafc;
         }
@@ -32,10 +34,6 @@
             background-color: var(--bg-gray);
             color: #1e293b;
         }
-        .bg-sd-blue { background-color: var(--primary-blue); }
-        .text-sd-blue { color: var(--primary-blue); }
-        .bg-sd-orange { background-color: var(--accent-orange); }
-        .border-sd-blue { border-color: var(--primary-blue); }
         
         .shadow-premium {
             box-shadow: 0 10px 25px -5px rgba(48, 63, 111, 0.1), 0 8px 10px -6px rgba(48, 63, 111, 0.1);
@@ -50,21 +48,25 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .hover-bg-light:hover { background-color: var(--primary-blue-light); }
         
-        /* 列印用樣式 */
+        /* 列印用樣式 (修復 PDF 裁切與空白的核心) */
         .print-table th, .print-table td {
-            border: 1px solid #d1d5db;
-            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            padding: 10px 12px;
             text-align: center;
-            word-break: break-all;
+            vertical-align: middle;
         }
-        .print-table th { background-color: #f3f4f6; }
+        .print-table th { background-color: #f1f5f9; font-weight: bold; color: #303f6f; }
         
-        /* 修復 PDF 匯出時被裁切的問題 */
-        .pdf-export-mode {
-            width: 210mm !important; /* 強制 A4 寬度 */
-            max-width: none !important;
+        /* PDF 匯出時強制觸發的樣式 */
+        .pdf-export-active {
+            width: 1000px !important;
+            max-width: 1000px !important;
             margin: 0 auto !important;
-            padding: 15mm !important;
+            padding: 20px !important;
+            background: white !important;
+        }
+        .pdf-export-active .overflow-x-auto {
+            overflow: visible !important; /* 解除水平滾動，避免裁切 */
         }
     </style>
 </head>
@@ -133,7 +135,7 @@
                         
                         <!-- 動態商品列表容器 -->
                         <div id="itemsContainer" class="space-y-6">
-                            <!-- 預設先寫死第一個商品 -->
+                            <!-- 第一個商品 -->
                             <div class="item-block bg-gray-50/50 p-5 rounded-2xl border border-gray-200 relative shadow-sm">
                                 <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
                                     <h4 class="font-bold text-[#303f6f] item-number-title">商品 <span class="idx-text">1</span></h4>
@@ -143,22 +145,25 @@
                                 </div>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <!-- 品名搜尋 (支援簡繁轉換) -->
                                     <div class="relative md:col-span-2">
                                         <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
-                                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋
+                                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體)
                                         </label>
-                                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發...)" autocomplete="off">
+                                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發、桌子...)" autocomplete="off">
                                         <i class="fa-solid fa-search absolute left-4 top-8 text-gray-400"></i>
-                                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-56 overflow-y-auto custom-scroll"></div>
+                                        <!-- 搜尋結果將動態顯示照片與品項 -->
+                                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
                                     </div>
-                                    <!-- 分開顯示實重與材積單價 -->
+                                    <!-- 實重單價 -->
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
-                                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-sd-blue font-black text-center" readonly placeholder="-">
+                                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
                                     </div>
+                                    <!-- 材積單價 -->
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
-                                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-sd-blue font-black text-center" readonly placeholder="-">
+                                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
                                     </div>
                                 </div>
                 
@@ -277,7 +282,7 @@
                                 </div>
 
                                 <button type="button" onclick="scrollToReport()" class="w-full mt-4 bg-[#303f6f] text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-800 transition shadow-md">
-                                    <i class="fa-solid fa-eye mr-1"></i> 查看完整報價單
+                                    <i class="fa-solid fa-arrow-down mr-1"></i> 查看完整報價單
                                 </button>
                             </div>
                         </div>
@@ -311,6 +316,7 @@
             </div>
             
             <!-- 欲匯出 PDF 的報價單區域 -->
+            <!-- 這裡去除了 overflow-x-auto 並確保背景為白，避免 PDF 空白與裁切 -->
             <div id="quoteReportElement" class="bg-white p-8 rounded-2xl shadow-premium border border-gray-100">
                 <div class="text-center mb-6">
                     <h2 class="text-3xl font-black text-[#303f6f] mb-2 tracking-widest">水滴集運 海運報價單</h2>
@@ -322,13 +328,14 @@
                     <p>收件地區：<span id="reportAddress" class="font-normal text-gray-600">尚未選擇</span></p>
                 </div>
 
-                <div class="w-full overflow-x-auto">
-                    <table class="w-full print-table text-sm border-collapse">
+                <!-- 報價表格 -->
+                <div class="w-full">
+                    <table class="w-full print-table text-sm border-collapse" style="table-layout: auto;">
                         <thead class="bg-[#e6eaf3] text-[#303f6f]">
                             <tr>
-                                <th class="w-10">項次</th>
-                                <th class="w-40">品名</th>
-                                <th>尺寸 (長x寬x高)</th>
+                                <th style="width: 5%;">項次</th>
+                                <th style="width: 25%;">品名</th>
+                                <th>尺寸 (L*W*H)</th>
                                 <th>數量</th>
                                 <th>總實重<br>(KG)</th>
                                 <th>總材積<br>(才)</th>
@@ -398,21 +405,40 @@
 
     <!-- 邏輯腳本 -->
     <script>
-        // --- 1. 資料庫建置：加入了材積單價 ---
+        // --- 1. 初始化 OpenCC 簡繁轉換 ---
+        let converter = null;
+        try {
+            // 使用 OpenCC 將輸入的簡體轉換為繁體
+            converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
+        } catch(e) {
+            console.error("OpenCC 載入失敗，將採用預設字串比對", e);
+            // 降級處理：直接回傳原始字串
+            converter = (str) => str;
+        }
+
+        // --- 2. 資料庫建置：結合客戶最新的 CSV 資料 ---
+        // (1類: 18/110, 2類: 21/126, 3類: 23/138)
         const csvData = [
-            { cat: 1, priceWt: 18, priceVol: 110, items: "合板收納儲物櫃、辦公電腦椅、書桌、紙類用品、塑膠管、塑膠盒、塑膠袋、塑膠片、PE膜、固定夾、PVC板、膠膜、塑膠瓶、塑膠蓋、塑膠殼、塑膠吊牌、木椅、木桌、木收納櫃、方塊椅、小茶几、塑膠衣架、穿凳椅、懶人椅、床架、塑膠椅墊、磁吸式漱口杯、浴室置物架、吧台椅子、木製電視櫃、塑膠卷膜、嬰兒床墊、嬰兒床架、梳妝台、化妝台、木製衣櫃、塑膠材質垃圾桶、上下床、洞洞板、紙箱、壓克力茶几、塑膠魚缸、儲物床、木質屏風立柱、原木升降茶几、懶人沙發" },
-            { cat: 2, priceWt: 25, priceVol: 160, items: "PU非真皮沙發凳子、金屬置物架、PVC包、布包、尼龍包、皮夾、塑膠雨衣、橡膠片、自行車配件、普通家具、射出模、註塑模具、塑膠粒、簡易機器配件、開瓶器、手動工具、針車機配件、PU皮料、音箱外殼、塑膠接頭、燈罩、玻璃球、無卡通圖案筆、皮帶扣、水龍頭配件、塑膠紐扣" },
-            { cat: 3, priceWt: 35, priceVol: 220, items: "玻璃茶几、烤漆茶几、塑膠地墊、機器簡易配件、布砂輪片、砂紙、高爾夫球頭、壓縮機配件、繼電器、汽車吸塵器、排線器、雨鞋內襯、水龍頭、刀具、閥門類、人體模特、散熱片、散熱風扇、眼罩、磁鐵、單體喇叭、充電器半成品、刀塔座、壓力表、油壓計、雨傘、減速機、加熱棒、分割器、分度盤、鋸片、主軸、簡易健身器材、室內用溫度計、樂器、汽車配件、指揮棒、連接線、成人腳踏自行車、玻璃瓶、石頭工藝品、手電筒、擺設品、吸盤掛勾、下水槽置物架、筷子架、寵物籠、寵物用品、塑膠車腳墊、化妝桌、衣物收納袋、貓爬架、陶瓷花瓶、紙板貓抓板、洗手盆陶瓷、花灑、鋁梯、手提袋、電視壁掛架、帆布袋、掛畫、化妝包、升降茶几、梯子、折疊梯、寵物用品不帶電、貓抓柱、抽屜推車、手動升降桌、手動升降電腦椅、手動升降電競椅、背包、皮革桌墊、寵物圍欄、硅藻墊" }
+            { cat: 1, priceWt: 18, priceVol: 110, items: "櫃體（純木製）、櫃子（純木製）、電視櫃（純木製）、餐邊櫃（純木製）、鞋櫃（純木製）、玄關櫃（純木製）、書櫃（純木製）、斗櫃（純木製）、五斗櫃（純木製）、六斗櫃（純木製）、抽屜櫃（純木製 不帶輪子）、餐桌（純木製）、桌子（純木製）、餐椅（純木製）、椅子（純木製）、書桌（純木製）、電腦桌（純木製）、辦公桌（純木製）、吧台桌（純木製）、邊桌（純木製 不帶輪子）、茶几（純木製 不帶輪子）、收納櫃（純木製）、儲物櫃（純木製）、穿鞋椅（純木製）、穿鞋凳（純木製）、衣櫃（純木製）、上下舖床架（純木製）、床架（純木製）、沙發（非真皮且不帶電動）、懶人沙發（非真皮且不帶電動）、方塊椅、洞洞板（純木製）、梳妝台（純木製 不帶電和鏡子）、吧台椅子（純木製）、塑膠盒（非接觸食物用）、塑膠袋（非接觸食物用）、紙類用品、紙箱、垃圾桶（塑膠材質）、儲物櫃（塑膠材質）、衣櫃（塑膠材質）、藤編鞋櫃、合板收納儲物櫃、辦公電腦椅、紙類用品、塑膠管、塑膠片、PE膜、固定夾、PVC板、膠膜、塑膠瓶、塑膠蓋、塑膠殼、塑膠吊牌、木椅、木桌、木收納櫃、小茶几、塑膠衣架、穿凳椅、懶人椅、塑膠椅墊、磁吸式漱口杯、浴室置物架、吧台椅子、木製電視櫃、塑膠卷膜、嬰兒床墊、嬰兒床架、木製衣櫃、塑膠材質垃圾桶、上下床、壓克力茶几、塑膠魚缸、儲物床、木質屏風立柱、原木升降茶几" },
+            { cat: 2, priceWt: 21, priceVol: 126, items: "洞洞板（金屬製）、梳妝台（木+金屬製 不帶電和鏡子）、吧台椅子（木+金屬製）、垃圾桶（金屬材質）、儲物櫃（金屬材質）、衣櫃（金屬材質）、層架（金屬材質）、開放式衣帽間（金屬材質）、電競桌（木+金屬製）、電腦椅（有手動升降功能）、電競椅（有手動升降功能）、掛衣架（金屬製）、不鏽鋼置物架、桌子（木製+壓克力）、櫃子（木製+壓克力）、茶几（木製+壓克力）、花店展示架（塑膠+金屬）、不鏽鋼櫥櫃（不含爐台）、寵物圍欄（塑膠製）、洗車房地格柵（塑膠製）、塑膠墊、置物推車（金屬製）、活動背板(KT材質)、KT板、開瓶器、手動工具、吊籃藤椅、不織布提袋（無版權商標）、門板（木+金屬製）、PU非真皮沙發凳子、金屬置物架、PVC包、布包、尼龍包、皮夾、塑膠雨衣、橡膠片、自行車配件、普通家具、射出模、註塑模具、塑膠粒、簡易機器配件、針車機配件、PU皮料、音箱外殼、塑膠接頭、燈罩、玻璃球、無卡通圖案筆、皮帶扣、水龍頭配件、塑膠紐扣" },
+            { cat: 3, priceWt: 23, priceVol: 138, items: "沙發（真皮 且不帶電動）、懶人沙發（真皮 且不帶電動）、電視櫃（帶玻璃）、鋼化玻璃茶几、烤漆玻璃茶几、地墊（塑膠製）、高爾夫球頭、汽車吸塵器、排線器、雨鞋內襯、水龍頭、人體模特、雨傘、簡易健身器材、室內用溫度計、非插電簡易樂器、簡單塑膠類汽車配件、手電筒（裝電池的 但出貨不帶電池)、擺設品、擠牙膏神器、玻璃茶几、烤漆茶几、機器簡易配件、布砂輪片、砂紙、壓縮機配件、繼電器、刀具、閥門類、散熱片、散熱風扇、眼罩、磁鐵、單體喇叭、充電器半成品、刀塔座、壓力表、油壓計、減速機、加熱棒、分割器、分度盤、鋸片、主軸、指揮棒、連接線、成人腳踏自行車、玻璃瓶、石頭工藝品、吸盤掛勾、下水槽置物架、筷子架、寵物籠、寵物用品、塑膠車腳墊、化妝桌、衣物收納袋、貓爬架、陶瓷花瓶、紙板貓抓板、洗手盆陶瓷、花灑、鋁梯、手提袋、電視壁掛架、帆布袋、掛畫、化妝包、升降茶几、梯子、折疊梯、寵物用品不帶電、貓抓柱、抽屜推車、手動升降桌、手動升降電腦椅、手動升降電競椅、背包、皮革桌墊、寵物圍欄、硅藻墊" }
         ];
 
         let searchableItems = [];
         csvData.forEach(c => {
             c.items.split('、').forEach(itemName => {
-                if(itemName.trim()) searchableItems.push({ name: itemName.trim(), priceWt: c.priceWt, priceVol: c.priceVol });
+                let trimmed = itemName.trim();
+                if(trimmed) {
+                    searchableItems.push({ 
+                        name: trimmed, 
+                        priceWt: c.priceWt, 
+                        priceVol: c.priceVol 
+                    });
+                }
             });
         });
 
-        // 台灣縣市與鄉鎮市區資料
+        // 台灣縣市資料 (省略部分以維持精簡，同之前設定)
         const twCounties = {
             "基隆市": ["仁愛區", "信義區", "中正區", "中山區", "安樂區", "暖暖區", "七堵區"],
             "台北市": ["中正區", "大同區", "中山區", "松山區", "大安區", "萬華區", "信義區", "士林區", "北投區", "內湖區", "南港區", "文山區"],
@@ -439,7 +465,7 @@
         };
         const remoteWords = ["花蓮", "台東", "屏東", "宜蘭", "南投", "澎湖", "金門", "馬祖", "綠島", "蘭嶼", "阿里山", "和平區", "信義鄉", "仁愛鄉", "琉球", "大同鄉", "南澳", "連江"];
 
-        // --- 2. 變數與核心功能初始化 ---
+        // --- 3. 動態商品區塊控制 ---
         const MAX_ITEMS = 10;
         let itemIndexCounter = 1;
         
@@ -448,16 +474,21 @@
         const citySelect = document.getElementById('citySelect');
         const districtSelect = document.getElementById('districtSelect');
         const remoteNotice = document.getElementById('remoteNotice');
-        const shippingForm = document.getElementById('shippingForm');
 
-        // 載入縣市資料
+        // 初始化縣市
         for (let city in twCounties) {
             let option = document.createElement("option");
             option.value = city; option.text = city;
             citySelect.appendChild(option);
         }
 
-        // --- 3. 多件商品表單動態邏輯 ---
+        // 產生模擬商品圖片的函數 (使用開源 Placehold)
+        function getImageUrl(name) {
+            let encodedName = encodeURIComponent(name.substring(0, 2));
+            return `https://placehold.co/100x100/e6eaf3/303f6f?text=${encodedName}`;
+        }
+
+        // 新增商品表單區塊
         function createItemBlock() {
             itemIndexCounter++;
             const block = document.createElement('div');
@@ -472,19 +503,19 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div class="relative md:col-span-2">
                         <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
-                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋
+                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體)
                         </label>
-                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發...)" autocomplete="off">
+                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：沙發、桌子...)" autocomplete="off">
                         <i class="fa-solid fa-search absolute left-4 top-8 text-gray-400"></i>
-                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-56 overflow-y-auto custom-scroll"></div>
+                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
-                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-sd-blue font-black text-center" readonly placeholder="-">
+                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
-                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-sd-blue font-black text-center" readonly placeholder="-">
+                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
                     </div>
                 </div>
                 <div>
@@ -522,30 +553,42 @@
         function updateItemCount() {
             const blocks = itemsContainer.querySelectorAll('.item-block');
             const count = blocks.length;
-            blocks.forEach((b, idx) => {
-                b.querySelector('.idx-text').textContent = (idx + 1);
-            });
+            blocks.forEach((b, idx) => { b.querySelector('.idx-text').textContent = (idx + 1); });
             document.getElementById('itemCountLabel').textContent = `(${count}/${MAX_ITEMS})`;
             if (count >= MAX_ITEMS) addItemBtn.style.display = 'none';
             else addItemBtn.style.display = 'flex';
         }
 
-        // --- 4. 委派事件處理 ---
+        addItemBtn.addEventListener('click', createItemBlock);
+
+        // --- 4. 委派事件處理 (包含搜尋與圖片顯示) ---
         document.addEventListener('input', function(e) {
             if (e.target.classList.contains('item-search')) {
-                const val = e.target.value.trim().toLowerCase();
+                const rawVal = e.target.value.trim();
                 const block = e.target.closest('.item-block');
                 const dropdown = block.querySelector('.search-dropdown');
                 
                 dropdown.innerHTML = '';
-                if (!val) { dropdown.classList.add('hidden'); return; }
+                if (!rawVal) { dropdown.classList.add('hidden'); return; }
 
-                const results = searchableItems.filter(i => i.name.includes(val)).slice(0, 8);
+                // 簡體轉繁體以利搜尋
+                const searchVal = converter(rawVal).toLowerCase();
+
+                const results = searchableItems.filter(i => i.name.toLowerCase().includes(searchVal)).slice(0, 8);
                 if (results.length > 0) {
                     results.forEach(res => {
                         const div = document.createElement('div');
-                        div.className = "px-4 py-3 text-sm cursor-pointer hover-bg-light flex justify-between items-center border-b border-gray-100 last:border-0";
-                        div.innerHTML = `<span class="font-bold text-slate-700">${res.name}</span><span class="text-[10px] text-[#ea580c] font-bold">選取帶入</span>`;
+                        div.className = "px-4 py-3 text-sm cursor-pointer hover-bg-light flex items-center border-b border-gray-100 last:border-0";
+                        
+                        // 加入縮圖與資訊
+                        div.innerHTML = `
+                            <img src="${getImageUrl(res.name)}" class="w-10 h-10 rounded-md object-cover mr-3 border border-gray-200" alt="商品照片">
+                            <div class="flex-grow">
+                                <div class="font-bold text-slate-700">${res.name}</div>
+                                <div class="text-[10px] text-gray-500 mt-0.5">實重: $${res.priceWt} | 材積: $${res.priceVol}</div>
+                            </div>
+                            <span class="text-[10px] text-[#ea580c] font-bold bg-orange-50 px-2 py-1 rounded">選擇</span>
+                        `;
                         div.onclick = function() {
                             block.querySelector('.item-search').value = res.name;
                             block.querySelector('.item-wt-price').value = res.priceWt;
@@ -555,12 +598,13 @@
                         dropdown.appendChild(div);
                     });
                 } else {
-                    dropdown.innerHTML = `<div class="p-4 text-center text-xs text-gray-400">找不到商品，<a href="https://lin.ee/oRc8Cuo" target="_blank" class="text-[#ea580c] underline">請洽客服</a></div>`;
+                    dropdown.innerHTML = `<div class="p-5 text-center text-xs text-gray-400">找不到包含「${rawVal}」的商品，<br><a href="https://lin.ee/oRc8Cuo" target="_blank" class="text-[#ea580c] font-bold underline mt-1 inline-block">請洽客服取得專屬報價</a></div>`;
                 }
                 dropdown.classList.remove('hidden');
             }
         });
 
+        // 點擊外部關閉搜尋或刪除商品
         document.addEventListener('click', function(e) {
             if (e.target.closest('.remove-item-btn')) {
                 e.target.closest('.item-block').remove();
@@ -619,9 +663,7 @@
             document.getElementById('fullReportSection').scrollIntoView({ behavior: 'smooth' });
         }
 
-        addItemBtn.addEventListener('click', createItemBlock);
-
-        shippingForm.addEventListener('submit', function(e) {
+        document.getElementById('shippingForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const blocks = document.querySelectorAll('.item-block');
@@ -656,13 +698,12 @@
                 // 比較：實重算出來的運費 vs 材積算出來的運費，取大者 (台灣海運計費標準)
                 let freightWt = itemTotalWt * priceWt;
                 let freightVol = itemTotalVol * priceVol;
-                let subtotal = Math.ceil(Math.max(freightWt, freightVol)); // 單品總額無條件進位
+                let subtotal = Math.ceil(Math.max(freightWt, freightVol)); 
 
                 sumTotalWeight += itemTotalWt;
                 sumTotalVolume += itemTotalVol;
                 totalFreight += subtotal;
 
-                // 判斷是用實重還是材積計費，在報表顯示對應單價
                 let appliedPriceText = (freightWt >= freightVol) ? `${priceWt}(實)` : `${priceVol}(材)`;
 
                 tableHtml += `
@@ -680,7 +721,7 @@
             });
 
             if (hasError) {
-                showError("請確保所有商品的「品名」、「尺寸」與「重量」皆已完整填寫！");
+                showError("請確保所有商品的「品名」、「尺寸」、「重量」與「單價」皆已完整填寫！");
                 return;
             }
 
@@ -724,7 +765,7 @@
             scrollToReport();
         });
 
-        // --- 7. 優化版 PDF 匯出功能 (修復裁切與空白問題) ---
+        // --- 7. 優化版 PDF 匯出功能 (確保 A4 不裁切、不空白) ---
         function downloadPDF() {
             const element = document.getElementById('quoteReportElement');
             const d = new Date();
@@ -732,30 +773,29 @@
             const filename = `水滴海運試算_${dateStr}.pdf`;
             const pdfBtn = document.getElementById('pdfBtn');
 
-            // 預備匯出時，強制寫入特定 class 以保證 A4 寬度，避免 RWD 導致排版裁切
-            element.classList.add('pdf-export-mode');
+            // 強制加上 .pdf-export-active 鎖定 A4 寬度與排版
+            element.classList.add('pdf-export-active');
 
-            // Html2pdf 設定
             const opt = {
-                margin:       [10, 10, 10, 10], 
+                margin:       [10, 10, 15, 10], 
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 1 },
-                // scale 加大可提高解析度，移除會導致空白錯誤的外網圖片干擾
+                // windowWidth: 1000 必須對應 css 中的 1000px，確保截圖一致
                 html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1000 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             const originalText = pdfBtn.innerHTML;
-            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 處理中...';
+            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 產生中...';
             pdfBtn.disabled = true;
 
             html2pdf().set(opt).from(element).save().then(() => {
-                element.classList.remove('pdf-export-mode'); // 復原排版
+                element.classList.remove('pdf-export-active'); // 復原排版
                 pdfBtn.innerHTML = originalText;
                 pdfBtn.disabled = false;
             }).catch(err => {
                 console.error("PDF Export Error: ", err);
-                element.classList.remove('pdf-export-mode');
+                element.classList.remove('pdf-export-active');
                 pdfBtn.innerHTML = originalText;
                 pdfBtn.disabled = false;
             });
