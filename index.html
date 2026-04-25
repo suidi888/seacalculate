@@ -14,8 +14,6 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
-    <!-- html2pdf.js for PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- OpenCC 簡繁轉換庫 -->
     <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
     
@@ -57,16 +55,43 @@
         }
         .print-table th { background-color: #f1f5f9; font-weight: bold; color: #303f6f; }
         
-        /* 確保背景複製時的字體與樣式正常 */
-        .pdf-clone-container {
-            width: 210mm !important; /* A4 寬度 */
-            background-color: white !important;
-            padding: 15mm !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-        }
-        .pdf-clone-container .overflow-x-auto {
-            overflow: visible !important; /* 關閉滾動條避免裁切 */
+        /* =========================================
+           終極解決方案：專屬列印模式 (取代容易空白的第三方套件)
+           ========================================= */
+        @media print {
+            /* 強制印出背景顏色 (確保表格標題的藍色與底色能印出來) */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            /* 隱藏網頁上所有不需要列印的元素 */
+            body * {
+                visibility: hidden;
+            }
+            /* 只顯示報價單區塊及其內容 */
+            #quoteReportElement, #quoteReportElement * {
+                visibility: visible;
+            }
+            /* 將報價單移動到頁面最左上角，佔滿版面 */
+            #quoteReportElement {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0 !important;
+                padding: 15px !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            /* 隱藏下載按鈕本身 */
+            #pdfBtn {
+                display: none !important;
+            }
+            /* 設定 A4 直式列印 */
+            @page {
+                size: A4 portrait;
+                margin: 1cm;
+            }
         }
     </style>
 </head>
@@ -247,15 +272,15 @@
 
         <!-- 報價總表與注意事項 (計算後顯示) -->
         <div id="fullReportSection" class="mt-10 hidden">
-            <!-- PDF 下載按鈕 -->
+            <!-- PDF 下載按鈕 (改成觸發原生列印) -->
             <div class="flex justify-between items-end mb-4 px-2">
                 <h3 class="text-2xl font-black text-[#303f6f]">海運試算報價總表</h3>
                 <button type="button" onclick="downloadPDF()" id="pdfBtn" class="bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-2.5 px-5 rounded-lg shadow transition flex items-center text-sm cursor-pointer">
-                    <i class="fa-solid fa-file-pdf mr-2"></i> 一鍵下載 PDF
+                    <i class="fa-solid fa-file-pdf mr-2"></i> 儲存為 PDF (透過列印)
                 </button>
             </div>
             
-            <!-- PDF 擷取的目標區域 -->
+            <!-- 報價單區域 -->
             <div id="quoteReportElement" class="bg-white p-8 rounded-2xl shadow-premium border border-gray-100">
                 <div class="text-center mb-6">
                     <h2 class="text-3xl font-black text-[#303f6f] mb-2 tracking-widest">水滴集運 海運報價單</h2>
@@ -352,22 +377,21 @@
             converter = (str) => str;
         }
 
-        // --- 2. 完整資料庫建置 ---
+        // --- 2. 完整資料庫建置 (更新為最新的費率) ---
         const csvData = [
-            // 第一類
+            // 第一類 (18 / 110)
             { cat: 1, priceWt: 18, priceVol: 110, items: "櫃體（純木製）、櫃子（純木製）、電視櫃（純木製）、餐邊櫃（純木製）、鞋櫃（純木製）、玄關櫃（純木製）、書櫃（純木製）、斗櫃（純木製）、五斗櫃（純木製）、六斗櫃（純木製）、抽屜櫃（純木製 不帶輪子）、餐桌（純木製）、桌子（純木製）、餐椅（純木製）、椅子（純木製）、書桌（純木製）、電腦桌（純木製）、辦公桌（純木製）、吧台桌（純木製）、邊桌（純木製 不帶輪子）、茶几（純木製 不帶輪子）、收納櫃（純木製）、儲物櫃（純木製）、穿鞋椅（純木製）、穿鞋凳（純木製）、衣櫃（純木製）、上下舖床架（純木製）、床架（純木製）、沙發（非真皮且不帶電動）、懶人沙發（非真皮且不帶電動）、方塊椅、洞洞板（純木製）、梳妝台（純木製 不帶電和鏡子）、吧台椅子（純木製）、塑膠盒（非接觸食物用）、塑膠袋（非接觸食物用）、紙類用品、紙箱、垃圾桶（塑膠材質）、衣櫃（塑膠材質）、藤編鞋櫃、合板收納儲物櫃、辦公電腦椅、塑膠管、塑膠片、PE膜、固定夾、PVC板、膠膜、塑膠瓶、塑膠蓋、塑膠殼、塑膠吊牌、木椅、木桌、木收納櫃、小茶几、塑膠衣架、穿凳椅、懶人椅、塑膠椅墊、磁吸式漱口杯、浴室置物架、木製電視櫃、塑膠卷膜、嬰兒床墊、嬰兒床架、木製衣櫃、上下床、壓克力茶几、塑膠魚缸、儲物床、木質屏風立柱、原木升降茶几" },
-            // 第二類
-            { cat: 2, priceWt: 21, priceVol: 126, items: "洞洞板（金屬製）、梳妝台（木+金屬製 不帶電和鏡子）、吧台椅子（木+金屬製）、垃圾桶（金屬材質）、儲物櫃（金屬材質）、衣櫃（金屬材質）、層架（金屬材質）、開放式衣帽間（金屬材質）、電競桌（木+金屬製）、電腦椅（有手動升降功能）、電競椅（有手動升降功能）、掛衣架（金屬製）、不鏽鋼置物架、桌子（木製+壓克力）、櫃子（木製+壓克力）、茶几（木製+壓克力）、花店展示架（塑膠+金屬）、不鏽鋼櫥櫃（不含爐台）、寵物圍欄（塑膠製）、洗車房地格柵（塑膠製）、塑膠墊、置物推車（金屬製）、活動背板(KT材質)、KT板、開瓶器、手動工具、吊籃藤椅、不織布提袋（無版權商標）、門板（木+金屬製）、PU非真皮沙發凳子、金屬置物架、PVC包、布包、尼龍包、皮夾、塑膠雨衣、橡膠片、自行車配件、普通家具、射出模、註塑模具、塑膠粒、簡易機器配件、針車機配件、PU皮料、音箱外殼、塑膠接頭、燈罩、玻璃球、無卡通圖案筆、皮帶扣、水龍頭配件、塑膠紐扣" },
-            // 第三類 (包含岩板類)
+            // 第二類 (21 / 124)
+            { cat: 2, priceWt: 21, priceVol: 124, items: "洞洞板（金屬製）、梳妝台（木+金屬製 不帶電和鏡子）、吧台椅子（木+金屬製）、垃圾桶（金屬材質）、儲物櫃（金屬材質）、衣櫃（金屬材質）、層架（金屬材質）、開放式衣帽間（金屬材質）、電競桌（木+金屬製）、電腦椅（有手動升降功能）、電競椅（有手動升降功能）、掛衣架（金屬製）、不鏽鋼置物架、桌子（木製+壓克力）、櫃子（木製+壓克力）、茶几（木製+壓克力）、花店展示架（塑膠+金屬）、不鏽鋼櫥櫃（不含爐台）、寵物圍欄（塑膠製）、洗車房地格柵（塑膠製）、塑膠墊、置物推車（金屬製）、活動背板(KT材質)、KT板、開瓶器、手動工具、吊籃藤椅、不織布提袋（無版權商標）、門板（木+金屬製）、PU非真皮沙發凳子、金屬置物架、PVC包、布包、尼龍包、皮夾、塑膠雨衣、橡膠片、自行車配件、普通家具、射出模、註塑模具、塑膠粒、簡易機器配件、針車機配件、PU皮料、音箱外殼、塑膠接頭、燈罩、玻璃球、無卡通圖案筆、皮帶扣、水龍頭配件、塑膠紐扣" },
+            // 第三類 (23 / 138) (包含岩板類)
             { cat: 3, priceWt: 23, priceVol: 138, items: "岩板餐桌、岩板茶几、岩板書桌、岩板電視櫃、沙發（真皮 且不帶電動）、懶人沙發（真皮 且不帶電動）、電視櫃（帶玻璃）、鋼化玻璃茶几、烤漆玻璃茶几、地墊（塑膠製）、高爾夫球頭、汽車吸塵器、排線器、雨鞋內襯、水龍頭、人體模特、雨傘、簡易健身器材、室內用溫度計、非插電簡易樂器、簡單塑膠類汽車配件、手電筒（裝電池的 但出貨不帶電池)、擺設品、擠牙膏神器、玻璃茶几、烤漆茶几、機器簡易配件、布砂輪片、砂紙、壓縮機配件、繼電器、刀具、閥門類、散熱片、散熱風扇、眼罩、磁鐵、單體喇叭、充電器半成品、刀塔座、壓力表、油壓計、減速機、加熱棒、分割器、分度盤、鋸片、主軸、指揮棒、連接線、成人腳踏自行車、玻璃瓶、石頭工藝品、吸盤掛勾、下水槽置物架、筷子架、寵物籠、寵物用品、塑膠車腳墊、化妝桌、衣物收納袋、貓爬架、陶瓷花瓶、紙板貓抓板、洗手盆陶瓷、花灑、鋁梯、手提袋、電視壁掛架、帆布袋、掛畫、化妝包、升降茶几、梯子、折疊梯、寵物用品不帶電、貓抓柱、抽屜推車、手動升降桌、手動升降電腦椅、手動升降電競椅、背包、皮革桌墊、寵物圍欄、硅藻墊" },
-            // 客服專屬報價
+            
+            // 客服專屬報價選項 (已更新為最新需求級距)
             { cat: "客服報價", priceWt: 18, priceVol: 110, items: "其他（已問客服報價）- 實重18 / 材積110" },
-            { cat: "客服報價", priceWt: 21, priceVol: 126, items: "其他（已問客服報價）- 實重21 / 材積126" },
+            { cat: "客服報價", priceWt: 21, priceVol: 124, items: "其他（已問客服報價）- 實重21 / 材積124" },
             { cat: "客服報價", priceWt: 23, priceVol: 138, items: "其他（已問客服報價）- 實重23 / 材積138" },
-            { cat: "客服報價", priceWt: 25, priceVol: 150, items: "其他（已問客服報價）- 實重25 / 材積150" },
-            { cat: "客服報價", priceWt: 30, priceVol: 180, items: "其他（已問客服報價）- 實重30 / 材積180" },
-            { cat: "客服報價", priceWt: 35, priceVol: 210, items: "其他（已問客服報價）- 實重35 / 材積210" },
-            { cat: "客服報價", priceWt: 40, priceVol: 240, items: "其他（已問客服報價）- 實重40 / 材積240" }
+            { cat: "客服報價", priceWt: 25, priceVol: 152, items: "其他（已問客服報價）- 實重25 / 材積152" },
+            { cat: "客服報價", priceWt: 28, priceVol: 166, items: "其他（已問客服報價）- 實重28 / 材積166" }
         ];
 
         let searchableItems = [];
@@ -699,54 +723,15 @@
             scrollToReport();
         });
 
-        // --- 7. 強力修復版 PDF 匯出功能 (背景渲染法，保證不再空白與裁切) ---
+        // --- 7. 下載 PDF：終極解決方案 (呼叫瀏覽器原生列印) ---
         function downloadPDF() {
-            const element = document.getElementById('quoteReportElement');
-            const d = new Date();
-            const dateStr = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-            const filename = `水滴海運試算_${dateStr}.pdf`;
-            const pdfBtn = document.getElementById('pdfBtn');
-
-            const originalText = pdfBtn.innerHTML;
-            pdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 產生中...';
-            pdfBtn.disabled = true;
-
-            // 【終極解法】：在背景偷偷複製一個表單，並將其定位在頁面最頂端。
-            // 這樣 html2canvas 在截圖時就不會因為「頁面已經向下滾動」而截取到全白畫面！
-            const clonedElement = element.cloneNode(true);
-            clonedElement.classList.add('pdf-clone-container');
+            // 彈出提示告訴客戶怎麼操作
+            showError("即將開啟列印視窗，請在目的地選擇「另存為 PDF」即可成功下載報價單！");
             
-            // 隱藏複製出的元素，以免影響客戶視覺，但必須是絕對定位且頂部對齊，否則會空白
-            clonedElement.style.position = 'absolute';
-            clonedElement.style.top = '0px';
-            clonedElement.style.left = '0px';
-            clonedElement.style.zIndex = '-9999'; 
-            document.body.appendChild(clonedElement);
-
-            const opt = {
-                margin:       [10, 10, 15, 10], 
-                filename:     filename,
-                image:        { type: 'jpeg', quality: 1 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false,
-                    scrollY: 0 // 強制從畫面最頂端開始抓取，解決空白問題
-                },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(clonedElement).save().then(() => {
-                document.body.removeChild(clonedElement); // 下載完畢後清除
-                pdfBtn.innerHTML = originalText;
-                pdfBtn.disabled = false;
-            }).catch(err => {
-                console.error("PDF Export Error: ", err);
-                document.body.removeChild(clonedElement);
-                pdfBtn.innerHTML = originalText;
-                pdfBtn.disabled = false;
-                alert("產生 PDF 時發生錯誤，請稍後再試。");
-            });
+            // 稍微延遲讓提示顯示後，呼叫原生列印
+            setTimeout(() => {
+                window.print();
+            }, 1500);
         }
     </script>
 </body>
