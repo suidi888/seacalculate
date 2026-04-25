@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>海運運費試算工具-水滴集運</title>
+    <title>海運運費試算工具</title>
     <!-- 網頁標籤圖標 -->
     <link rel="icon" href="./純頭像（去背）.png" type="image/png">
     
@@ -45,13 +45,13 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .hover-bg-light:hover { background-color: var(--primary-blue-light); }
         
-        /* 列印用樣式 */
+        /* 列印與表格樣式 - 強制不換行，讓手機版可以左右滑動 */
         .print-table th, .print-table td {
             border: 1px solid #cbd5e1;
             padding: 10px 12px;
             text-align: center;
             vertical-align: middle;
-            word-break: break-word;
+            white-space: nowrap; /* 確保內容不換行，讓窄螢幕啟用左右滾動 */
         }
         .print-table th { background-color: #f1f5f9; font-weight: bold; color: #303f6f; }
         
@@ -159,7 +159,64 @@
                         
                         <!-- 動態商品列表容器 -->
                         <div id="itemsContainer" class="space-y-6">
-                            <!-- JS將動態產生商品區塊 -->
+                            <!-- 預設第一個商品區塊 -->
+                            <div class="item-block bg-gray-50/50 p-5 rounded-2xl border border-gray-200 relative shadow-sm">
+                                <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                    <h4 class="font-bold text-[#303f6f] item-number-title">商品 <span class="idx-text">1</span></h4>
+                                    <button type="button" class="text-red-400 hover:text-red-600 font-bold text-sm remove-item-btn transition hidden">
+                                        <i class="fa-solid fa-trash mr-1"></i> 移除
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <!-- 品名搜尋 (修正圖標跑版問題) -->
+                                    <div class="md:col-span-2">
+                                        <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體，輸入「其他」可自訂客服單價)
+                                        </label>
+                                        <!-- 將 input 與 search 圖標獨立包在 relative 容器中，保證垂直居中對齊 -->
+                                        <div class="relative">
+                                            <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：岩板、沙發、其他...)" autocomplete="off">
+                                            <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                            <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
+                                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
+                                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
+                                        <i class="fa-solid fa-box-open text-[#303f6f] mr-1.5"></i> 2. 規格與數量
+                                    </label>
+                                    <div class="grid grid-cols-5 gap-2">
+                                        <div>
+                                            <input type="number" class="item-l w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="長" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-w w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="寬" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-h w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="高" min="1">
+                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-wt w-full p-2.5 bg-white border border-[#303f6f] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#303f6f] px-1" placeholder="單件重" step="0.1" min="0.1">
+                                            <p class="text-[10px] text-[#303f6f] font-bold text-center mt-1">KG</p>
+                                        </div>
+                                        <div>
+                                            <input type="number" class="item-qty w-full p-2.5 bg-white border border-[#ea580c] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#ea580c] px-1" placeholder="數量" value="1" min="1">
+                                            <p class="text-[10px] text-[#ea580c] font-bold text-center mt-1">件</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 新增商品按鈕 -->
@@ -272,10 +329,10 @@
 
         <!-- 報價總表與注意事項 (計算後顯示) -->
         <div id="fullReportSection" class="mt-10 hidden">
-            <!-- PDF 下載按鈕 (改成觸發原生列印) -->
+            <!-- 列印報價單按鈕 -->
             <div class="flex justify-between items-end mb-4 px-2">
                 <h3 class="text-2xl font-black text-[#303f6f]">海運試算報價總表</h3>
-                <button type="button" onclick="downloadPDF()" id="pdfBtn" class="bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-2.5 px-5 rounded-lg shadow transition flex items-center text-sm cursor-pointer">
+                <button type="button" onclick="window.print()" id="pdfBtn" class="bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-2.5 px-5 rounded-lg shadow transition flex items-center text-sm cursor-pointer">
                     <i class="fa-solid fa-file-pdf mr-2"></i> 儲存為 PDF (透過列印)
                 </button>
             </div>
@@ -293,6 +350,7 @@
                 </div>
 
                 <div class="w-full overflow-x-auto">
+                    <!-- 表格保持不換行，方便手機左右滾動 -->
                     <table class="w-full print-table text-sm border-collapse" style="table-layout: auto;">
                         <thead class="bg-[#e6eaf3] text-[#303f6f]">
                             <tr>
@@ -434,7 +492,7 @@
             "連江縣": ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
         };
         
-        // 偏遠地區精準判斷資料庫 (依據附檔全面更新)
+        // 偏遠地區精準判斷資料庫
         const remoteDatabase = {
             "台北市": ["文山區", "北投區"],
             "新北市": ["三芝區", "石門區", "烏來區", "金山區", "萬里區", "坪林區", "貢寮區", "平溪區", "石碇區", "雙溪區", "瑞芳區", "汐止區", "三峽區", "新店區"],
@@ -446,7 +504,7 @@
             "彰化縣": ["溪州鄉", "芳苑鄉", "二林鎮", "大城鄉", "竹塘鄉"],
             "雲林縣": ["古坑鄉", "麥寮鄉", "台西鄉", "東勢鄉", "四湖鄉", "口湖鄉"],
             "嘉義縣": ["梅山鄉", "阿里山鄉", "番路鄉", "大埔鄉", "東石鄉", "鹿草鄉", "中埔鄉", "布袋鎮", "六腳鄉"],
-            "台南市": ["大內區", "七股區", "北門區", "左鎮區", "玉井區", "東山區", "南化區", "楠西區", "龍崎區", "白河區", "山上區"],
+            "台南市": ["大內區", "七股區", "北門區", "左鎮區", "玉井區", "東山區", "南化區", "楠西區", "龍崎區", "白河區", "山上區", "關廟區"], // 補充部分關仔嶺區域
             "高雄市": ["內門區", "桃源區", "六龜區", "田寮區", "永安區", "甲仙區", "杉林區", "美濃區", "茂林區", "旗山區", "那瑪夏區", "旗津區"],
             "屏東縣": ["全區"],
             "宜蘭縣": ["全區"],
@@ -485,13 +543,15 @@
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div class="relative md:col-span-2">
+                    <div class="md:col-span-2">
                         <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
                             <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體，輸入「其他」可自訂客服單價)
                         </label>
-                        <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：岩板、沙發、其他...)" autocomplete="off">
-                        <i class="fa-solid fa-search absolute left-4 top-8 text-gray-400"></i>
-                        <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
+                        <div class="relative">
+                            <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：岩板、沙發、其他...)" autocomplete="off">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
@@ -560,8 +620,6 @@
 
                 const searchVal = converter(rawVal).toLowerCase();
 
-                // 修復「岩板」無法搜尋的問題：
-                // 同時比對「轉換前(rawValLower)」與「轉換後(searchVal)」的字串，確保「岩」不會因轉換為「巖」而找不到
                 const results = searchableItems.filter(i => {
                     const itemName = i.name.toLowerCase();
                     return itemName.includes(searchVal) || itemName.includes(rawValLower);
@@ -572,7 +630,6 @@
                         const div = document.createElement('div');
                         div.className = "px-4 py-3 text-sm cursor-pointer hover-bg-light flex items-center border-b border-gray-100 last:border-0";
                         
-                        // 使用水滴 Logo 預設作為商品照片示意圖
                         const imgUrl = "./純頭像（去背）.png"; 
                         
                         div.innerHTML = `
@@ -644,7 +701,6 @@
 
             let isRemote = false;
 
-            // 檢查是否在偏遠資料庫中
             if (remoteDatabase[city]) {
                 if (remoteDatabase[city].includes("全區") || remoteDatabase[city].includes(district)) {
                     isRemote = true;
