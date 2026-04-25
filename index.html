@@ -116,10 +116,10 @@
             <!-- 電腦版選單 -->
             <div class="hidden lg:flex items-center space-x-8 text-[15px] font-bold text-[#303f6f]">
                 <a href="https://suidi-logistics.com/" target="_blank" class="hover:text-[#ea580c] transition">首頁</a>
-                <a href="https://suidi-logistics.com/%E9%97%9C%E6%96%BC%E6%88%91%E5%80%91/" target="_blank" class="hover:text-[#ea580c] transition">關於我們</a>
+                <a href="https://suidi-logistics.com/%e9%97%9c%e6%96%bc%e6%b0%b4%e6%bb%b4/" target="_blank" class="hover:text-[#ea580c] transition">關於水滴</a>
                 <a href="https://suidi-logistics.com/%E6%9C%8D%E5%8B%99%E4%BB%8B%E7%B4%B9/" target="_blank" class="hover:text-[#ea580c] transition">服務項目</a>
                 <a href="https://suidi-logistics.com/%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%af/" target="_blank" class="hover:text-[#ea580c] transition">最新消息</a>
-                <a href="https://suidi-logistics.com/%E5%B8%B8%E8%A6%8B%E5%95%8F%E9%A1%8C/" target="_blank" class="hover:text-[#ea580c] transition">常見問題</a>
+                <a href="https://suidi-logistics.com/%e5%ae%b6%e5%85%b7%e7%b5%84%e8%a3%9d%e6%9c%8d%e5%8b%99%e4%bb%8b%e7%b4%b9%e6%b5%81%e7%a8%8b%e8%aa%aa%e6%98%8e-%e6%b0%b4%e6%bb%b4%e9%9b%86%e9%81%8b%ef%bd%9c%e6%b7%98%e5%af%b6%e9%9b%86%e9%81%8b%e5%ae%b6/" target="_blank" class="hover:text-[#ea580c] transition">海運家具組裝</a>
                 <a href="https://lin.ee/oRc8Cuo" target="_blank" class="bg-[#303f6f] text-white px-6 py-2.5 rounded-full shadow-md hover:bg-[#ea580c] hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 flex items-center">
                     <i class="fa-brands fa-line text-lg mr-1.5"></i> 聯絡我們
                 </a>
@@ -377,7 +377,7 @@
             converter = (str) => str;
         }
 
-        // --- 2. 完整資料庫建置 (更新為最新的費率) ---
+        // --- 2. 完整資料庫建置 ---
         const csvData = [
             // 第一類 (18 / 110)
             { cat: 1, priceWt: 18, priceVol: 110, items: "櫃體（純木製）、櫃子（純木製）、電視櫃（純木製）、餐邊櫃（純木製）、鞋櫃（純木製）、玄關櫃（純木製）、書櫃（純木製）、斗櫃（純木製）、五斗櫃（純木製）、六斗櫃（純木製）、抽屜櫃（純木製 不帶輪子）、餐桌（純木製）、桌子（純木製）、餐椅（純木製）、椅子（純木製）、書桌（純木製）、電腦桌（純木製）、辦公桌（純木製）、吧台桌（純木製）、邊桌（純木製 不帶輪子）、茶几（純木製 不帶輪子）、收納櫃（純木製）、儲物櫃（純木製）、穿鞋椅（純木製）、穿鞋凳（純木製）、衣櫃（純木製）、上下舖床架（純木製）、床架（純木製）、沙發（非真皮且不帶電動）、懶人沙發（非真皮且不帶電動）、方塊椅、洞洞板（純木製）、梳妝台（純木製 不帶電和鏡子）、吧台椅子（純木製）、塑膠盒（非接觸食物用）、塑膠袋（非接觸食物用）、紙類用品、紙箱、垃圾桶（塑膠材質）、衣櫃（塑膠材質）、藤編鞋櫃、合板收納儲物櫃、辦公電腦椅、塑膠管、塑膠片、PE膜、固定夾、PVC板、膠膜、塑膠瓶、塑膠蓋、塑膠殼、塑膠吊牌、木椅、木桌、木收納櫃、小茶几、塑膠衣架、穿凳椅、懶人椅、塑膠椅墊、磁吸式漱口杯、浴室置物架、木製電視櫃、塑膠卷膜、嬰兒床墊、嬰兒床架、木製衣櫃、上下床、壓克力茶几、塑膠魚缸、儲物床、木質屏風立柱、原木升降茶几" },
@@ -386,7 +386,7 @@
             // 第三類 (23 / 138) (包含岩板類)
             { cat: 3, priceWt: 23, priceVol: 138, items: "岩板餐桌、岩板茶几、岩板書桌、岩板電視櫃、沙發（真皮 且不帶電動）、懶人沙發（真皮 且不帶電動）、電視櫃（帶玻璃）、鋼化玻璃茶几、烤漆玻璃茶几、地墊（塑膠製）、高爾夫球頭、汽車吸塵器、排線器、雨鞋內襯、水龍頭、人體模特、雨傘、簡易健身器材、室內用溫度計、非插電簡易樂器、簡單塑膠類汽車配件、手電筒（裝電池的 但出貨不帶電池)、擺設品、擠牙膏神器、玻璃茶几、烤漆茶几、機器簡易配件、布砂輪片、砂紙、壓縮機配件、繼電器、刀具、閥門類、散熱片、散熱風扇、眼罩、磁鐵、單體喇叭、充電器半成品、刀塔座、壓力表、油壓計、減速機、加熱棒、分割器、分度盤、鋸片、主軸、指揮棒、連接線、成人腳踏自行車、玻璃瓶、石頭工藝品、吸盤掛勾、下水槽置物架、筷子架、寵物籠、寵物用品、塑膠車腳墊、化妝桌、衣物收納袋、貓爬架、陶瓷花瓶、紙板貓抓板、洗手盆陶瓷、花灑、鋁梯、手提袋、電視壁掛架、帆布袋、掛畫、化妝包、升降茶几、梯子、折疊梯、寵物用品不帶電、貓抓柱、抽屜推車、手動升降桌、手動升降電腦椅、手動升降電競椅、背包、皮革桌墊、寵物圍欄、硅藻墊" },
             
-            // 客服專屬報價選項 (已更新為最新需求級距)
+            // 客服專屬報價選項
             { cat: "客服報價", priceWt: 18, priceVol: 110, items: "其他（已問客服報價）- 實重18 / 材積110" },
             { cat: "客服報價", priceWt: 21, priceVol: 124, items: "其他（已問客服報價）- 實重21 / 材積124" },
             { cat: "客服報價", priceWt: 23, priceVol: 138, items: "其他（已問客服報價）- 實重23 / 材積138" },
@@ -408,7 +408,7 @@
             });
         });
 
-        // 台灣縣市資料
+        // 台灣縣市資料 (未偏遠)
         const twCounties = {
             "基隆市": ["仁愛區", "信義區", "中正區", "中山區", "安樂區", "暖暖區", "七堵區"],
             "台北市": ["中正區", "大同區", "中山區", "松山區", "大安區", "萬華區", "信義區", "士林區", "北投區", "內湖區", "南港區", "文山區"],
@@ -433,7 +433,29 @@
             "金門縣": ["金沙鎮", "金湖鎮", "金寧鄉", "金城鎮", "烈嶼鄉", "烏坵鄉"],
             "連江縣": ["南竿鄉", "北竿鄉", "莒光鄉", "東引鄉"]
         };
-        const remoteWords = ["花蓮", "台東", "屏東", "宜蘭", "南投", "澎湖", "金門", "馬祖", "綠島", "蘭嶼", "阿里山", "和平區", "信義鄉", "仁愛鄉", "琉球", "大同鄉", "南澳", "連江"];
+        
+        // 偏遠地區精準判斷資料庫 (依據附檔更新)
+        const remoteDatabase = {
+            "台北市": ["文山區", "北投區"],
+            "新北市": ["萬里區", "金山區", "深坑區", "石碇區", "瑞芳區", "平溪區", "雙溪區", "貢寮區", "坪林區", "烏來區", "石門區", "三芝區", "八里區", "林口區", "新店區"],
+            "桃園市": ["復興區", "新屋區", "觀音區", "大溪區", "大園區"],
+            "新竹縣": ["關西鎮", "五峰鄉", "橫山鄉", "尖石鄉", "北埔鄉", "峨眉鄉"],
+            "苗栗縣": ["三灣鄉", "南庄鄉", "獅潭鄉", "後龍鎮", "通霄鎮", "造橋鄉", "大湖鄉", "泰安鄉", "銅鑼鄉", "三義鄉", "西湖鄉", "卓蘭鎮", "公館鄉"],
+            "台中市": ["石岡區", "東勢區", "和平區", "新社區"],
+            "彰化縣": ["芳苑鄉", "二林鎮", "大城鄉", "竹塘鄉", "溪州鄉", "芬園鄉", "二水鄉"],
+            "南投縣": ["中寮鄉", "國姓鄉", "埔里鎮", "仁愛鄉", "集集鎮", "水里鄉", "魚池鄉", "信義鄉", "鹿谷鄉", "竹山鎮"],
+            "雲林縣": ["古坑鄉", "水林鄉", "口湖鄉", "四湖鄉", "台西鄉", "東勢鄉", "崙背鄉", "麥寮鄉", "褒忠鄉", "林內鄉", "二崙鄉"],
+            "嘉義縣": ["番路鄉", "梅山鄉", "竹崎鄉", "阿里山鄉", "中埔鄉", "大埔鄉", "東石鄉", "義竹鄉", "布袋鎮", "鹿草鄉", "溪口鄉"],
+            "台南市": ["玉井區", "楠西區", "南化區", "龍崎區", "官田區", "七股區", "將軍區", "學甲區", "北門區", "後壁區", "白河區", "東山區", "六甲區", "大內區", "山上區", "左鎮區", "下營區", "西港區", "佳里區", "柳營區", "鹽水區"],
+            "高雄市": ["田寮區", "旗山區", "美濃區", "六龜區", "內門區", "杉林區", "甲仙區", "桃源區", "那瑪夏區", "茂林區"],
+            "屏東縣": ["三地門鄉", "霧台鄉", "瑪家鄉", "高樹鄉", "泰武鄉", "來義鄉", "新埤鄉", "南州鄉", "林邊鄉", "東港鎮", "琉球鄉", "佳冬鄉", "枋寮鄉", "枋山鄉", "春日鄉", "獅子鄉", "車城鄉", "牡丹鄉", "恆春鎮", "滿州鄉", "里港鄉", "鹽埔鄉", "萬丹鄉", "新園鄉", "崁頂鄉"],
+            "宜蘭縣": ["全區"],
+            "花蓮縣": ["全區"],
+            "台東縣": ["全區"],
+            "澎湖縣": ["全區"],
+            "連江縣": ["全區"],
+            "金門縣": ["全區"] // 新增金門，視同外島偏遠
+        };
 
         // --- 3. 動態商品區塊控制 ---
         const MAX_ITEMS = 10;
@@ -537,7 +559,14 @@
 
                 const searchVal = converter(rawVal).toLowerCase();
 
-                const results = searchableItems.filter(i => i.name.toLowerCase().includes(searchVal)).slice(0, 10);
+                // 修復「岩板」無法搜尋的問題：
+                // 使用每一個字元去比對，只要包含關鍵字就算。例如：岩、板、岩板 都會被找出來。
+                const results = searchableItems.filter(i => {
+                    const itemName = i.name.toLowerCase();
+                    // 只要包含這個字串就回傳
+                    return itemName.includes(searchVal);
+                }).slice(0, 10);
+
                 if (results.length > 0) {
                     results.forEach(res => {
                         const div = document.createElement('div');
@@ -583,7 +612,7 @@
             }
         });
 
-        // --- 5. 地址連動邏輯 ---
+        // --- 5. 地址連動邏輯與偏遠判定 ---
         citySelect.addEventListener('change', function() {
             const city = citySelect.value;
             districtSelect.innerHTML = '<option value="" disabled selected>請選擇地區</option>'; 
@@ -605,10 +634,28 @@
         districtSelect.addEventListener('change', checkRemoteArea);
 
         function checkRemoteArea() {
-            const fullAddress = (citySelect.value || "") + (districtSelect.value || "");
-            if(!fullAddress) { remoteNotice.classList.add('hidden'); return; }
-            if (remoteWords.some(w => fullAddress.includes(w))) remoteNotice.classList.remove('hidden');
-            else remoteNotice.classList.add('hidden');
+            const city = citySelect.value;
+            const district = districtSelect.value;
+            
+            if (!city) {
+                remoteNotice.classList.add('hidden');
+                return;
+            }
+
+            let isRemote = false;
+
+            // 檢查是否在偏遠資料庫中
+            if (remoteDatabase[city]) {
+                if (remoteDatabase[city].includes("全區") || remoteDatabase[city].includes(district)) {
+                    isRemote = true;
+                }
+            }
+
+            if (isRemote) {
+                remoteNotice.classList.remove('hidden');
+            } else {
+                remoteNotice.classList.add('hidden');
+            }
         }
 
         // --- 6. 工具與計算邏輯 ---
