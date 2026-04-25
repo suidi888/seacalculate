@@ -159,64 +159,7 @@
                         
                         <!-- 動態商品列表容器 -->
                         <div id="itemsContainer" class="space-y-6">
-                            <!-- 預設第一個商品區塊 -->
-                            <div class="item-block bg-gray-50/50 p-5 rounded-2xl border border-gray-200 relative shadow-sm">
-                                <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
-                                    <h4 class="font-bold text-[#303f6f] item-number-title">商品 <span class="idx-text">1</span></h4>
-                                    <button type="button" class="text-red-400 hover:text-red-600 font-bold text-sm remove-item-btn transition hidden">
-                                        <i class="fa-solid fa-trash mr-1"></i> 移除
-                                    </button>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <!-- 品名搜尋 (修正圖標跑版問題) -->
-                                    <div class="md:col-span-2">
-                                        <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
-                                            <i class="fa-solid fa-magnifying-glass text-[#303f6f] mr-1.5"></i> 1. 品名搜尋 (支援簡體/繁體，輸入「其他」可自訂客服單價)
-                                        </label>
-                                        <!-- 將 input 與 search 圖標獨立包在 relative 容器中，保證垂直居中對齊 -->
-                                        <div class="relative">
-                                            <input type="text" class="item-search w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none input-focus" placeholder="搜尋品名 (如：岩板、沙發、其他...)" autocomplete="off">
-                                            <i class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                                            <div class="search-dropdown hidden absolute z-30 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-[300px] overflow-y-auto custom-scroll"></div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">實重單價 (NTD/KG)</label>
-                                        <input type="number" class="item-wt-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-500 mb-1 ml-1 font-medium">材積單價 (NTD/才)</label>
-                                        <input type="number" class="item-vol-price w-full p-3 bg-[#e6eaf3] border border-[#d1d8e8] rounded-xl text-[#303f6f] font-black text-center" readonly placeholder="-">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="flex items-center text-xs text-gray-500 mb-1 ml-1 font-bold">
-                                        <i class="fa-solid fa-box-open text-[#303f6f] mr-1.5"></i> 2. 規格與數量
-                                    </label>
-                                    <div class="grid grid-cols-5 gap-2">
-                                        <div>
-                                            <input type="number" class="item-l w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="長" min="1">
-                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
-                                        </div>
-                                        <div>
-                                            <input type="number" class="item-w w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="寬" min="1">
-                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
-                                        </div>
-                                        <div>
-                                            <input type="number" class="item-h w-full p-2.5 bg-white border border-gray-300 rounded-lg text-center focus:outline-none input-focus text-sm font-bold px-1" placeholder="高" min="1">
-                                            <p class="text-[10px] text-gray-400 text-center mt-1">CM</p>
-                                        </div>
-                                        <div>
-                                            <input type="number" class="item-wt w-full p-2.5 bg-white border border-[#303f6f] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#303f6f] px-1" placeholder="單件重" step="0.1" min="0.1">
-                                            <p class="text-[10px] text-[#303f6f] font-bold text-center mt-1">KG</p>
-                                        </div>
-                                        <div>
-                                            <input type="number" class="item-qty w-full p-2.5 bg-white border border-[#ea580c] rounded-lg text-center focus:outline-none input-focus text-sm font-black text-[#ea580c] px-1" placeholder="數量" value="1" min="1">
-                                            <p class="text-[10px] text-[#ea580c] font-bold text-center mt-1">件</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- JS將動態產生預設的第一個商品區塊 -->
                         </div>
 
                         <!-- 新增商品按鈕 -->
@@ -329,12 +272,9 @@
 
         <!-- 報價總表與注意事項 (計算後顯示) -->
         <div id="fullReportSection" class="mt-10 hidden">
-            <!-- 列印報價單按鈕 -->
+            <!-- 標題區域 -->
             <div class="flex justify-between items-end mb-4 px-2">
-                <h3 class="text-2xl font-black text-[#303f6f]">海運試算報價總表</h3>
-                <button type="button" onclick="window.print()" id="pdfBtn" class="bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-2.5 px-5 rounded-lg shadow transition flex items-center text-sm cursor-pointer">
-                    <i class="fa-solid fa-file-pdf mr-2"></i> 儲存為 PDF (透過列印)
-                </button>
+                <h3 class="text-2xl font-black text-[#303f6f]">海運試算結果</h3>
             </div>
             
             <!-- 報價單區域 -->
@@ -356,11 +296,11 @@
                             <tr>
                                 <th style="width: 5%;">項次</th>
                                 <th style="width: 25%;">品名</th>
-                                <th>尺寸 (L*W*H)</th>
+                                <th>尺寸 (cm)</th>
                                 <th>數量</th>
-                                <th>總實重<br>(KG)</th>
+                                <th>總實重<br>(kg)</th>
                                 <th>總材積<br>(才)</th>
-                                <th>計費單價<br>(實/材)</th>
+                                <th>計費單價<br>(實重/材積)</th>
                                 <th>小計(NTD)</th>
                             </tr>
                         </thead>
@@ -406,6 +346,10 @@
                             海運報價皆已包稅、包清關、包基本派送到您地址一樓門口貨車可卸貨處。<br>
                             若您的貨物有超出運送限制、收貨地址偏遠、加購其他附加服務（例如上樓.組裝.拆清運木架），將可能產生額外費用，請洽客服進一步諮詢。
                         </li>
+                          <li class="flex items-start">
+                            <i class="fa-solid fa-check text-[#303f6f] mt-1 mr-2 opacity-50 text-xs"></i>
+                            本試算結果僅供參考，實際金額已客服報價為準，並非代表最終運費。
+                        </li>
                         <li class="flex items-center mt-3 pt-3 border-t border-gray-200">
                             <a href="https://suidi-logistics.com/%E6%9C%8D%E5%8B%99%E4%BB%8B%E7%B4%B9/#04-1" target="_blank" class="inline-flex items-center text-white bg-[#303f6f] hover:bg-[#1e293b] px-4 py-1.5 rounded-lg text-xs transition shadow">
                                 海運詳細說明 <i class="fa-solid fa-arrow-up-right-from-square ml-1.5"></i>
@@ -414,13 +358,20 @@
                     </ul>
                 </div>
             </div>
+            
+            <!-- 列印報價單按鈕 (移至底部) -->
+            <div class="mt-8 flex justify-center print:hidden">
+                <button type="button" onclick="downloadPDF()" id="pdfBtn" class="bg-[#303f6f] hover:bg-[#1e293b] text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:-translate-y-1 flex items-center text-lg cursor-pointer">
+                    <i class="fa-solid fa-file-pdf mr-2"></i> 儲存為PDF/列印
+                </button>
+            </div>
         </div>
 
     </main>
 
     <footer class="bg-white border-t border-gray-100 py-8 mt-auto">
         <div class="max-w-6xl mx-auto px-4 text-center">
-            <p class="text-xs text-gray-500 font-medium">&copy; 2026 水滴集運 Suidi Logistics. 專業海運報價系統.</p>
+            <p class="text-xs text-gray-500 font-medium">&copy; 2026 水滴集運 Suidi Logistics. 海運報價系統.</p>
         </div>
     </footer>
 
